@@ -28,3 +28,15 @@ Chữ số cuối SID: **3**
   - Cài đặt cấu trúc Merkle-Damgård, 64 hằng số $K$, các hàm logic $Ch, Maj, \Sigma_0, \Sigma_1, \sigma_0, \sigma_1$.
   - Tính toán mã băm thông điệp, xác thực tính toàn vẹn và ứng dụng trong chữ ký số / HMAC.
 - **Báo cáo học thuật 8 mục**: [bao_cao_sha256.md](file:///d:/HOCTAP/IS(Text)/bao_cao_sha256.md)
+
+---
+
+## 4. Chữ ký số: ECDSA (Elliptic Curve Digital Signature Algorithm)
+- **Mã nguồn Python thuần**: [ecdsa.py](file:///d:/HOCTAP/IS(Text)/ecdsa.py)
+  - Cài đặt từ nguyên lý gốc: Biểu diễn điểm trên đường cong Elliptic, cấu trúc nhóm Abel, phép cộng hai điểm (Point Addition), nhân đôi điểm (Point Doubling), nhân vô hướng (Double-and-Add), Euclid mở rộng tìm nghịch đảo.
+  - Sử dụng đường cong tiêu chuẩn **secp256k1** (chuẩn Bitcoin, Ethereum) và đường cong kiểm thử số nhỏ **Toy Curve trên $\mathbb{F}_{17}$**.
+  - Kết nối trực tiếp với hàm băm [sha256.py](file:///d:/HOCTAP/IS(Text)/sha256.py) tự viết để băm thông điệp trước khi ký và xác minh.
+  - Tích hợp bộ kiểm thử toàn diện: Chữ ký hợp lệ, thông điệp giả mạo, can thiệp chữ ký, sai lệch khóa công khai.
+  - Mô phỏng thực nghiệm đòn tấn công toán học kinh điển: **Đánh cắp khóa riêng do tái sử dụng số ngẫu nhiên nonce $k$** (Nonce Reuse Attack - lỗ hổng PlayStation 3).
+- **Báo cáo học thuật 8 mục**: [bao_cao_ecdsa.md](file:///d:/HOCTAP/IS(Text)/bao_cao_ecdsa.md)
+
