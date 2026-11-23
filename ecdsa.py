@@ -18,15 +18,8 @@ import time
 from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
-# Tích hợp trực tiếp module băm SHA-256 tự viết từ nguyên lý gốc
-try:
-    from sha256 import bam_sha256_bytes
-except ImportError:
-    # Trường hợp file sha256.py không cùng đường dẫn hoặc được gọi độc lập
-    import hashlib
-
-    def bam_sha256_bytes(du_lieu: bytes) -> bytes:
-        return hashlib.sha256(du_lieu).digest()
+# Tích hợp trực tiếp module băm SHA-256 tự viết từ nguyên lý gốc (sha256.py)
+from sha256 import bam_sha256_bytes
 
 
 # ==============================================================================

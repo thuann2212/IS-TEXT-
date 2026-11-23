@@ -165,23 +165,26 @@ AES-128 được thiết kế để đóng vai trò một **Hoán vị giả ng�
 
 ## Mục 6. Ví dụ tính tay từng bước cho 1 khối 16-byte ở Vòng 0 và Vòng 1
 
-Để minh họa chính xác tuyệt đối, ta thực hiện tính tay từng bước trên khối bản rõ 16 byte mang thông tin sinh viên:
-- **Khối bản rõ $P$ (16 byte ASCII)**: `"Tran Gia Thuan 3"`
-  $$\text{Hex}(P) = \texttt{54 72 61 6e 20 47 69 61 20 54 68 75 61 6e 20 33}$$
+Để minh họa chính xác tuyệt đối và đúng chuẩn đệm PKCS#7, ta thực hiện tính tay từng bước trên chuỗi họ tên sinh viên **`"Tran Gia Thuan"`** (14 byte, không kèm SID):
+- **Bản rõ gốc (14 byte ASCII)**: `"Tran Gia Thuan"`
+  $$\text{Hex} = \texttt{54 72 61 6e 20 47 69 61 20 54 68 75 61 6e}$$
+- **Đệm dữ liệu tự động theo chuẩn PKCS#7 (`dem_pkcs7`)**:
+  Vì kích thước khối của AES là 16 byte, chuỗi 14 byte còn thiếu $16 - 14 = 2$ byte. Chuẩn PKCS#7 tự động nối thêm 2 byte có giá trị `0x02` vào cuối để tạo thành khối đầu vào 16 byte $P$:
+  $$\text{Hex}(P) = \texttt{54 72 61 6e 20 47 69 61 20 54 68 75 61 6e \mathbf{02 02}}$$
 - **Khóa bí mật $K = RoundKey_0$ (16 byte đầu của $\text{SHA-256}(\text{"Trần Gia Thuận"})$ từ [sha256.py](file:///d:/HOCTAP/IS(Text)/sha256.py))**:
   $$\text{Hex}(K) = \texttt{70 c3 1d dd b8 7c f9 c3 fd 10 3a 56 69 34 68 39}$$
 
 ### 6.1. Xếp vào ma trận trạng thái $4 \times 4$ (theo từng cột) và thực hiện Vòng 0 (`AddRoundKey`)
 Xếp 16 byte của $P$ và $RoundKey_0$ vào hai ma trận $4 \times 4$ theo cột:
 
-$$S_{\text{in}} = \begin{bmatrix} \texttt{54} & \texttt{20} & \texttt{20} & \texttt{61} \\ \texttt{72} & \texttt{47} & \texttt{54} & \texttt{6e} \\ \texttt{61} & \texttt{69} & \texttt{68} & \texttt{20} \\ \texttt{6e} & \texttt{61} & \texttt{75} & \texttt{33} \end{bmatrix}, \quad RoundKey_0 = \begin{bmatrix} \texttt{70} & \texttt{b8} & \texttt{fd} & \texttt{69} \\ \texttt{c3} & \texttt{7c} & \texttt{10} & \texttt{34} \\ \texttt{1d} & \texttt{f9} & \texttt{3a} & \texttt{68} \\ \texttt{dd} & \texttt{c3} & \texttt{56} & \texttt{39} \end{bmatrix}$$
+$$S_{\text{in}} = \begin{bmatrix} \texttt{54} & \texttt{20} & \texttt{20} & \texttt{61} \\ \texttt{72} & \texttt{47} & \texttt{54} & \texttt{6e} \\ \texttt{61} & \texttt{69} & \texttt{68} & \texttt{02} \\ \texttt{6e} & \texttt{61} & \texttt{75} & \texttt{02} \end{bmatrix}, \quad RoundKey_0 = \begin{bmatrix} \texttt{70} & \texttt{b8} & \texttt{fd} & \texttt{69} \\ \texttt{c3} & \texttt{7c} & \texttt{10} & \texttt{34} \\ \texttt{1d} & \texttt{f9} & \texttt{3a} & \texttt{68} \\ \texttt{dd} & \texttt{c3} & \texttt{56} & \texttt{39} \end{bmatrix}$$
 
 **Vòng 0 – Phép `AddRoundKey` ($S^{(0)} = S_{\text{in}} \oplus RoundKey_0$)**:
-Thực hiện XOR từng phần tử tương ứng (ví dụ: cột 0 có $\texttt{54} \oplus \texttt{70} = \texttt{24}$, $\texttt{72} \oplus \texttt{c3} = \texttt{b1}$, $\texttt{61} \oplus \texttt{1d} = \texttt{7c}$, $\texttt{6e} \oplus \texttt{dd} = \texttt{b3}$):
+Thực hiện XOR từng phần tử tương ứng (ví dụ ở cột 3: $\texttt{61} \oplus \texttt{69} = \texttt{08}$, $\texttt{6e} \oplus \texttt{34} = \texttt{5a}$, $\texttt{02} \oplus \texttt{68} = \texttt{6a}$, $\texttt{02} \oplus \texttt{39} = \texttt{3b}$):
 
-$$S^{(0)} = \begin{bmatrix} \texttt{54}\oplus\texttt{70} & \texttt{20}\oplus\texttt{b8} & \texttt{20}\oplus\texttt{fd} & \texttt{61}\oplus\texttt{69} \\ \texttt{72}\oplus\texttt{c3} & \texttt{47}\oplus\texttt{7c} & \texttt{54}\oplus\texttt{10} & \texttt{6e}\oplus\texttt{34} \\ \texttt{61}\oplus\texttt{1d} & \texttt{69}\oplus\texttt{f9} & \texttt{68}\oplus\texttt{3a} & \texttt{20}\oplus\texttt{68} \\ \texttt{6e}\oplus\texttt{dd} & \texttt{61}\oplus\texttt{c3} & \texttt{75}\oplus\texttt{56} & \texttt{33}\oplus\texttt{39} \end{bmatrix} = \begin{bmatrix} \texttt{24} & \texttt{98} & \texttt{dd} & \texttt{08} \\ \texttt{b1} & \texttt{3b} & \texttt{44} & \texttt{5a} \\ \texttt{7c} & \texttt{90} & \texttt{52} & \texttt{48} \\ \texttt{b3} & \texttt{a2} & \texttt{23} & \texttt{0a} \end{bmatrix}$$
+$$S^{(0)} = \begin{bmatrix} \texttt{54}\oplus\texttt{70} & \texttt{20}\oplus\texttt{b8} & \texttt{20}\oplus\texttt{fd} & \texttt{61}\oplus\texttt{69} \\ \texttt{72}\oplus\texttt{c3} & \texttt{47}\oplus\texttt{7c} & \texttt{54}\oplus\texttt{10} & \texttt{6e}\oplus\texttt{34} \\ \texttt{61}\oplus\texttt{1d} & \texttt{69}\oplus\texttt{f9} & \texttt{68}\oplus\texttt{3a} & \texttt{02}\oplus\texttt{68} \\ \texttt{6e}\oplus\texttt{dd} & \texttt{61}\oplus\texttt{c3} & \texttt{75}\oplus\texttt{56} & \texttt{02}\oplus\texttt{39} \end{bmatrix} = \begin{bmatrix} \texttt{24} & \texttt{98} & \texttt{dd} & \texttt{08} \\ \texttt{b1} & \texttt{3b} & \texttt{44} & \texttt{5a} \\ \texttt{7c} & \texttt{90} & \texttt{52} & \texttt{6a} \\ \texttt{b3} & \texttt{a2} & \texttt{23} & \texttt{3b} \end{bmatrix}$$
 
-*(Chuỗi 16 byte theo cột sau Vòng 0: `24 b1 7c b3 98 3b 90 a2 dd 44 52 23 08 5a 48 0a`)*.
+*(Chuỗi 16 byte theo cột sau Vòng 0: `24 b1 7c b3 98 3b 90 a2 dd 44 52 23 08 5a 6a 3b`)*.
 
 ---
 
@@ -192,20 +195,20 @@ Tra bảng `S_BOX` cho từng byte của $S^{(0)}$ (4 bit cao chỉ dòng, 4 bit
 - Cột 0: $\text{S-Box}(\texttt{24}) = \texttt{36}$, $\text{S-Box}(\texttt{b1}) = \texttt{c8}$, $\text{S-Box}(\texttt{7c}) = \texttt{10}$, $\text{S-Box}(\texttt{b3}) = \texttt{6d}$.
 - Cột 1: $\text{S-Box}(\texttt{98}) = \texttt{46}$, $\text{S-Box}(\texttt{3b}) = \texttt{e2}$, $\text{S-Box}(\texttt{90}) = \texttt{60}$, $\text{S-Box}(\texttt{a2}) = \texttt{3a}$.
 - Cột 2: $\text{S-Box}(\texttt{dd}) = \texttt{c1}$, $\text{S-Box}(\texttt{44}) = \texttt{1b}$, $\text{S-Box}(\texttt{52}) = \texttt{00}$, $\text{S-Box}(\texttt{23}) = \texttt{26}$.
-- Cột 3: $\text{S-Box}(\texttt{08}) = \texttt{30}$, $\text{S-Box}(\texttt{5a}) = \texttt{be}$, $\text{S-Box}(\texttt{48}) = \texttt{52}$, $\text{S-Box}(\texttt{0a}) = \texttt{67}$.
+- Cột 3: $\text{S-Box}(\texttt{08}) = \texttt{30}$, $\text{S-Box}(\texttt{5a}) = \texttt{be}$, $\text{S-Box}(\texttt{6a}) = \texttt{02}$, $\text{S-Box}(\texttt{3b}) = \texttt{e2}$.
 
-$$S_{\text{sub}}^{(1)} = \begin{bmatrix} \texttt{36} & \texttt{46} & \texttt{c1} & \texttt{30} \\ \texttt{c8} & \texttt{e2} & \texttt{1b} & \texttt{be} \\ \texttt{10} & \texttt{60} & \texttt{00} & \texttt{52} \\ \texttt{6d} & \texttt{3a} & \texttt{26} & \texttt{67} \end{bmatrix}$$
+$$S_{\text{sub}}^{(1)} = \begin{bmatrix} \texttt{36} & \texttt{46} & \texttt{c1} & \texttt{30} \\ \texttt{c8} & \texttt{e2} & \texttt{1b} & \texttt{be} \\ \texttt{10} & \texttt{60} & \texttt{00} & \texttt{02} \\ \texttt{6d} & \texttt{3a} & \texttt{26} & \texttt{e2} \end{bmatrix}$$
 
 #### Bước 1.2: Phép dịch dòng `ShiftRows`
 - Dòng 0 (dịch trái 0 vị trí): `36 46 c1 30` $\to$ `36 46 c1 30`
 - Dòng 1 (dịch trái 1 vị trí): `c8 e2 1b be` $\to$ `e2 1b be c8`
-- Dòng 2 (dịch trái 2 vị trí): `10 60 00 52` $\to$ `00 52 10 60`
-- Dòng 3 (dịch trái 3 vị trí): `6d 3a 26 67` $\to$ `67 6d 3a 26`
+- Dòng 2 (dịch trái 2 vị trí): `10 60 00 02` $\to$ `00 02 10 60`
+- Dòng 3 (dịch trái 3 vị trí): `6d 3a 26 e2` $\to$ `e2 6d 3a 26`
 
-$$S_{\text{shift}}^{(1)} = \begin{bmatrix} \texttt{36} & \texttt{46} & \texttt{c1} & \texttt{30} \\ \texttt{e2} & \texttt{1b} & \texttt{be} & \texttt{c8} \\ \texttt{00} & \texttt{52} & \texttt{10} & \texttt{60} \\ \texttt{67} & \texttt{6d} & \texttt{3a} & \texttt{26} \end{bmatrix}$$
+$$S_{\text{shift}}^{(1)} = \begin{bmatrix} \texttt{36} & \texttt{46} & \texttt{c1} & \texttt{30} \\ \texttt{e2} & \texttt{1b} & \texttt{be} & \texttt{c8} \\ \texttt{00} & \texttt{02} & \texttt{10} & \texttt{60} \\ \texttt{e2} & \texttt{6d} & \texttt{3a} & \texttt{26} \end{bmatrix}$$
 
 #### Bước 1.3: Phép trộn cột `MixColumns` trên $GF(2^8)$
-Ta minh họa chi tiết phép nhân ma trận trên $GF(2^8)$ cho **Cột 0** là $[s_0, s_1, s_2, s_3]^T = [\texttt{36}, \texttt{e2}, \texttt{00}, \texttt{67}]^T$:
+Ta minh họa chi tiết phép nhân ma trận trên $GF(2^8)$ cho **Cột 0** là $[s_0, s_1, s_2, s_3]^T = [\texttt{36}, \texttt{e2}, \texttt{00}, \texttt{e2}]^T$:
 - Trước hết tính các tích với `{02}` (`xtime`) và `{03}` (`xtime(x) ^ x`) trong $GF(2^8)$:
   - Với $s_0 = \texttt{36} = 00110110_2$ (bit cao nhất $= 0$):
     - $\{02\} \otimes \texttt{36} = \texttt{36} \ll 1 = \texttt{6c}$
@@ -215,19 +218,19 @@ Ta minh họa chi tiết phép nhân ma trận trên $GF(2^8)$ cho **Cột 0** l
     - $\{03\} \otimes \texttt{e2} = \texttt{df} \oplus \texttt{e2} = \texttt{3d}$
   - Với $s_2 = \texttt{00}$:
     - $\{02\} \otimes \texttt{00} = \texttt{00}$, $\{03\} \otimes \texttt{00} = \texttt{00}$
-  - Với $s_3 = \texttt{67} = 01100111_2$ (bit cao nhất $= 0$):
-    - $\{02\} \otimes \texttt{67} = \texttt{67} \ll 1 = \texttt{ce}$
-    - $\{03\} \otimes \texttt{67} = \texttt{ce} \oplus \texttt{67} = \texttt{a9}$
+  - Với $s_3 = \texttt{e2} = 11100010_2$ (bit cao nhất $= 1$):
+    - $\{02\} \otimes \texttt{e2} = \texttt{df}$
+    - $\{03\} \otimes \texttt{e2} = \texttt{3d}$
 - Thay vào 4 phương trình của Cột 0:
   $$\begin{aligned}
-  s'_{0,0} &= (\{02\}\otimes\texttt{36}) \oplus (\{03\}\otimes\texttt{e2}) \oplus \texttt{00} \oplus \texttt{67} = \texttt{6c} \oplus \texttt{3d} \oplus \texttt{00} \oplus \texttt{67} = \texttt{36} \\
-  s'_{1,0} &= \texttt{36} \oplus (\{02\}\otimes\texttt{e2}) \oplus (\{03\}\otimes\texttt{00}) \oplus \texttt{67} = \texttt{36} \oplus \texttt{df} \oplus \texttt{00} \oplus \texttt{67} = \texttt{8e} \\
-  s'_{2,0} &= \texttt{36} \oplus \texttt{e2} \oplus (\{02\}\otimes\texttt{00}) \oplus (\{03\}\otimes\texttt{67}) = \texttt{36} \oplus \texttt{e2} \oplus \texttt{00} \oplus \texttt{a9} = \texttt{7d} \\
-  s'_{3,0} &= (\{03\}\otimes\texttt{36}) \oplus \texttt{e2} \oplus \texttt{00} \oplus (\{02\}\otimes\texttt{67}) = \texttt{5a} \oplus \texttt{e2} \oplus \texttt{00} \oplus \texttt{ce} = \texttt{76}
+  s'_{0,0} &= (\{02\}\otimes\texttt{36}) \oplus (\{03\}\otimes\texttt{e2}) \oplus \texttt{00} \oplus \texttt{e2} = \texttt{6c} \oplus \texttt{3d} \oplus \texttt{00} \oplus \texttt{e2} = \texttt{b3} \\
+  s'_{1,0} &= \texttt{36} \oplus (\{02\}\otimes\texttt{e2}) \oplus (\{03\}\otimes\texttt{00}) \oplus \texttt{e2} = \texttt{36} \oplus \texttt{df} \oplus \texttt{00} \oplus \texttt{e2} = \texttt{0b} \\
+  s'_{2,0} &= \texttt{36} \oplus \texttt{e2} \oplus (\{02\}\otimes\texttt{00}) \oplus (\{03\}\otimes\texttt{e2}) = \texttt{36} \oplus \texttt{e2} \oplus \texttt{00} \oplus \texttt{3d} = \texttt{e9} \\
+  s'_{3,0} &= (\{03\}\otimes\texttt{36}) \oplus \texttt{e2} \oplus \texttt{00} \oplus (\{02\}\otimes\texttt{e2}) = \texttt{5a} \oplus \texttt{e2} \oplus \texttt{00} \oplus \texttt{df} = \texttt{67}
   \end{aligned}$$
-  Vậy Cột 0 sau `MixColumns` là $[\texttt{36}, \texttt{8e}, \texttt{7d}, \texttt{76}]^T$. Thực hiện hoàn toàn tương tự cho Cột 1, Cột 2 và Cột 3, ta thu được ma trận sau `MixColumns`:
+  Vậy Cột 0 sau `MixColumns` là $[\texttt{b3}, \texttt{0b}, \texttt{e9}, \texttt{67}]^T$. Thực hiện hoàn toàn tương tự cho Cột 1, Cột 2 và Cột 3, ta thu được ma trận sau `MixColumns`:
 
-$$S_{\text{mix}}^{(1)} = \begin{bmatrix} \texttt{36} & \texttt{9e} & \texttt{6a} & \texttt{65} \\ \texttt{8e} & \texttt{eb} & \texttt{ac} & \texttt{3d} \\ \texttt{7d} & \texttt{4e} & \texttt{11} & \texttt{52} \\ \texttt{76} & \texttt{59} & \texttt{82} & \texttt{b4} \end{bmatrix}$$
+$$S_{\text{mix}}^{(1)} = \begin{bmatrix} \texttt{b3} & \texttt{ce} & \texttt{6a} & \texttt{65} \\ \texttt{0b} & \texttt{1b} & \texttt{ac} & \texttt{3d} \\ \texttt{e9} & \texttt{ee} & \texttt{11} & \texttt{52} \\ \texttt{67} & \texttt{09} & \texttt{82} & \texttt{b4} \end{bmatrix}$$
 
 #### Bước 1.4: Tính khóa vòng $RoundKey_1$ và thực hiện `AddRoundKey`
 1. **Tính $RoundKey_1$ ($W_4, W_5, W_6, W_7$) từ $RoundKey_0$**:
@@ -242,9 +245,9 @@ $$S_{\text{mix}}^{(1)} = \begin{bmatrix} \texttt{36} & \texttt{9e} & \texttt{6a}
 
 2. **Thực hiện `AddRoundKey` ($S^{(1)} = S_{\text{mix}}^{(1)} \oplus RoundKey_1$)**:
 
-$$S^{(1)} = \begin{bmatrix} \texttt{36} & \texttt{9e} & \texttt{6a} & \texttt{65} \\ \texttt{8e} & \texttt{eb} & \texttt{ac} & \texttt{3d} \\ \texttt{7d} & \texttt{4e} & \texttt{11} & \texttt{52} \\ \texttt{76} & \texttt{59} & \texttt{82} & \texttt{b4} \end{bmatrix} \oplus \begin{bmatrix} \texttt{69} & \texttt{d1} & \texttt{2c} & \texttt{45} \\ \texttt{86} & \texttt{fa} & \texttt{ea} & \texttt{de} \\ \texttt{0f} & \texttt{f6} & \texttt{cc} & \texttt{a4} \\ \texttt{24} & \texttt{e7} & \texttt{b1} & \texttt{88} \end{bmatrix} = \begin{bmatrix} \texttt{5f} & \texttt{4f} & \texttt{46} & \texttt{20} \\ \texttt{08} & \texttt{11} & \texttt{46} & \texttt{e3} \\ \texttt{72} & \texttt{b8} & \texttt{dd} & \texttt{f6} \\ \texttt{52} & \texttt{be} & \texttt{33} & \texttt{3c} \end{bmatrix}$$
+$$S^{(1)} = \begin{bmatrix} \texttt{b3} & \texttt{ce} & \texttt{6a} & \texttt{65} \\ \texttt{0b} & \texttt{1b} & \texttt{ac} & \texttt{3d} \\ \texttt{e9} & \texttt{ee} & \texttt{11} & \texttt{52} \\ \texttt{67} & \texttt{09} & \texttt{82} & \texttt{b4} \end{bmatrix} \oplus \begin{bmatrix} \texttt{69} & \texttt{d1} & \texttt{2c} & \texttt{45} \\ \texttt{86} & \texttt{fa} & \texttt{ea} & \texttt{de} \\ \texttt{0f} & \texttt{f6} & \texttt{cc} & \texttt{a4} \\ \texttt{24} & \texttt{e7} & \texttt{b1} & \texttt{88} \end{bmatrix} = \begin{bmatrix} \texttt{da} & \texttt{1f} & \texttt{46} & \texttt{20} \\ \texttt{8d} & \texttt{e1} & \texttt{46} & \texttt{e3} \\ \texttt{e6} & \texttt{18} & \texttt{dd} & \texttt{f6} \\ \texttt{43} & \texttt{ee} & \texttt{33} & \texttt{3c} \end{bmatrix}$$
 
-*(Chuỗi 16 byte kết thúc Vòng 1: `5f 08 72 52 4f 11 b8 be 46 46 dd 33 20 e3 f6 3c` – khớp 100% với kết quả truy vết của chương trình [aes128.py](file:///d:/HOCTAP/IS(Text)/aes128.py))*.
+*(Chuỗi 16 byte kết thúc Vòng 1: `da 8d e6 43 1f e1 18 ee 46 46 dd 33 20 e3 f6 3c`, bản mã sau 10 vòng là `485472a086cb866f58d5b8c321a9d5df`, và khi giải mã + gỡ đệm PKCS#7 trả về chính xác `'Tran Gia Thuan'` – khớp 100% với kết quả truy vết của chương trình [aes128.py](file:///d:/HOCTAP/IS(Text)/aes128.py))*.
 
 ---
 
@@ -283,8 +286,8 @@ Chương trình [aes128.py](file:///d:/HOCTAP/IS(Text)/aes128.py) đã được 
 | **1. Kiểm chứng đại số S-Box** | 256 phần tử $a \in GF(2^8)$ | $a^{-1} \in GF(2^8)$ + Biến đổi Affine `0x63` | Khớp 256/256 phần tử `S_BOX` & `INV_S_BOX` | **ĐẠT (PASS)** |
 | **2. Vector chuẩn FIPS 197 (C.1)** | Plaintext: `00112233445566778899aabbccddeeff`<br>Key: `000102030405060708090a0b0c0d0e0f` | Ciphertext:<br>`69c4e0d86a7b0430d8cdb78070b4c55a` | Giải mã ngược khớp 100% Plaintext gốc | **ĐẠT (PASS)** |
 | **3. Khóa sinh viên từ `sha256.py`** | Họ tên: `"Trần Gia Thuận"` (SID cuối = 3) | Khóa 128-bit (16B đầu SHA-256):<br>`70c31dddb87cf9c3fd103a5669346839` | IV 128-bit (16B sau SHA-256):<br>`aa646cb3240d200a80859c06f07ef0e0` | **Chính xác 100%** |
-| **4. Khối đơn 16B ví dụ tính tay** | Plaintext: `"Tran Gia Thuan 3"` (16B ASCII) | Ciphertext sau 10 vòng:<br>`5e6893bde9afb0b26943320d14220e89` | Giải mã khôi phục chính xác `"Tran Gia Thuan 3"` | **KHỚP 100%** |
-| **5. Văn bản tiếng Việt dài (CBC & ECB + PKCS#7)** | Chuỗi tiếng Việt UTF-8 dài **274 bytes** (sau đệm PKCS#7 là **288 bytes** = 18 khối, đệm 14 byte `0x0e`) | Bản mã CBC (288B): `ac74bee5bad46b4c...`<br>Bản mã ECB (288B): `39b51c27cea4ae89...` | Giải mã CBC và gỡ đệm PKCS#7 khôi phục nguyên vẹn 274 byte chuỗi tiếng Việt gốc | **KHỚP 100%** |
+| **4. Khối đơn 16B ví dụ tính tay** | Plaintext: `"Tran Gia Thuan"` (14B + đệm PKCS#7 `0x02 0x02` = 16B) | Ciphertext sau 10 vòng:<br>`485472a086cb866f58d5b8c321a9d5df` | Giải mã + gỡ đệm PKCS#7 khôi phục chính xác `"Tran Gia Thuan"` | **KHỚP 100%** |
+| **5. Văn bản tiếng Việt dài (CBC & ECB + PKCS#7)** | Chuỗi tiếng Việt UTF-8 dài **247 bytes** (sau đệm PKCS#7 là **256 bytes** = 16 khối, đệm 9 byte `0x09`) | Bản mã CBC (256B): `ac74bee5bad46b4c...`<br>Bản mã ECB (256B): `39b51c27cea4ae89...` | Giải mã CBC và gỡ đệm PKCS#7 khôi phục nguyên vẹn 247 byte chuỗi tiếng Việt gốc | **KHỚP 100%** |
 
 ### 8.2. Bảng đánh giá hiệu năng tính toán (Benchmark AES-128-CBC)
 Kết quả đo thực nghiệm trực tiếp khi chạy `python -X utf8 aes128.py` (lấy trung bình qua 20 lần lặp cho mỗi kích thước dữ liệu ở chế độ AES-128-CBC kèm đệm PKCS#7):

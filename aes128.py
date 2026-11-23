@@ -585,11 +585,11 @@ def main():
     print(f"   + Giải mã ngược       : {pt_khoi_phuc.hex()}")
     print(f"   + Đánh giá            : {'ĐẠT (PASS)' if (ct_thuc_te == ct_ky_vong and pt_khoi_phuc == pt_nist) else 'LỖI'}")
 
-    # 2. Kết nối với sha256.py để lấy khóa AES-128 từ họ tên "Trần Gia Thuận"
+    # 2. Kết nối với sha256.py để lấy khóa AES-128 từ họ tên "Trần Gia Thuận" (không kèm SID)
     ho_ten = "Trần Gia Thuận"
     khoa_sv, iv_sv, bam_day_du = lay_khoa_va_iv_sinh_vien(ho_ten)
-    print("\n[2] TRÍCH XUẤT KHÓA BÍ MẬT TỪ FILE sha256.py (HỌ TÊN SINH VIÊN):")
-    print(f" - Họ tên sinh viên          : {ho_ten} (Chữ số cuối SID: 3)")
+    print("\n[2] TRÍCH XUẤT KHÓA BÍ MẬT TỪ FILE sha256.py (CHỈ DÙNG HỌ TÊN SINH VIÊN):")
+    print(f" - Họ tên sinh viên          : {ho_ten}")
     print(f" - SHA-256 đầy đủ (256-bit)  : {bam_day_du.hex()}")
     print(f" - Khóa AES-128 (16B đầu)    : {khoa_sv.hex()}")
     print(f" - Vector IV CBC (16B sau)   : {iv_sv.hex()}")
@@ -600,19 +600,25 @@ def main():
     for idx, rk in enumerate(ds_rk_sv):
         print(f" - RoundKey[{idx:2d}] : {state_sang_bytes(rk).hex()}")
 
-    # 3. Dữ liệu đối chiếu ví dụ tính tay Vòng 0 và Vòng 1 (Khối 16 byte đầu của thông điệp)
-    khoi_mau_16b = b"Tran Gia Thuan 3"  # Đúng 16 byte ASCII (54 72 61 6e 20 47 69 61 20 54 68 75 61 6e 20 33)
-    print("\n[4] TRUY VẾT CHI TIẾT VÒNG 0 & VÒNG 1 CHO VÍ DỤ TÍNH TAY (Khối 'Tran Gia Thuan 3'):")
+    # 3. Dữ liệu đối chiếu ví dụ tính tay Vòng 0 và Vòng 1:
+    # Chuỗi tên "Tran Gia Thuan" (14 byte) được đệm tự động bằng PKCS#7 thêm 2 byte 0x02 thành 16 byte
+    ten_ro_14b = b"Tran Gia Thuan"
+    khoi_mau_16b = dem_pkcs7(ten_ro_14b, 16)  # 54 72 61 6e 20 47 69 61 20 54 68 75 61 6e 02 02
+    print("\n[4] TRUY VẾT CHI TIẾT VÒNG 0 & VÒNG 1 CHO VÍ DỤ TÍNH TAY (Chuỗi 'Tran Gia Thuan' + Đệm PKCS#7 0x02 0x02):")
+    print(f" - Bản rõ gốc (14B)         : {ten_ro_14b.decode('utf-8')!r} ({ten_ro_14b.hex(' ')})")
+    print(f" - Sau đệm PKCS#7 (16B)     : {khoi_mau_16b.hex(' ')} (đệm 2 byte 0x02)")
     minh_hoa_tinh_tay_vong0_vong1(khoi_mau_16b, khoa_sv)
     ct_khoi_mau = ma_hoa_khoi_16byte(khoi_mau_16b, ds_rk_sv)
-    pt_khoi_mau = giai_ma_khoi_16byte(ct_khoi_mau, ds_rk_sv)
+    pt_da_dem = giai_ma_khoi_16byte(ct_khoi_mau, ds_rk_sv)
+    pt_khoi_mau = bo_dem_pkcs7(pt_da_dem, 16)
     print(f" - Bản mã sau 10 vòng (Hex)  : {ct_khoi_mau.hex()}")
-    print(f" - Giải mã kiểm chứng        : {pt_khoi_mau.decode('utf-8')!r} (Khớp: {pt_khoi_mau == khoi_mau_16b})")
+    print(f" - Giải mã trước gỡ đệm (16B): {pt_da_dem.hex(' ')}")
+    print(f" - Giải mã sau gỡ đệm PKCS#7 : {pt_khoi_mau.decode('utf-8')!r} (Khớp 100%: {pt_khoi_mau == ten_ro_14b})")
 
-    # 4. Mã hóa và giải mã chuỗi văn bản tiếng Việt dài bất kỳ (Chế độ CBC & ECB + PKCS#7)
+    # 4. Mã hóa và giải mã chuỗi họ tên có dấu "Trần Gia Thuận" và văn bản tiếng Việt dài (CBC & ECB + PKCS#7)
     van_ban_tieng_viet = (
         "Đồ án môn An toàn thông tin - Phần Mật mã khóa đối xứng AES-128. "
-        "Sinh viên thực hiện: Trần Gia Thuận (Chữ số cuối SID: 3). "
+        "Sinh viên thực hiện: Trần Gia Thuận. "
         "Kiểm chứng mã hóa khối chế độ CBC và ECB kết hợp đệm dữ liệu PKCS#7 cho tiếng Việt UTF-8!"
     )
     du_lieu_ro_utf8 = van_ban_tieng_viet.encode("utf-8")
