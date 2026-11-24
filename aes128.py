@@ -459,6 +459,8 @@ def ma_hoa_aes128_ecb(ban_ro: bytes, khoa_16_byte: bytes) -> bytes:
 
 def giai_ma_aes128_ecb(ban_ma: bytes, khoa_16_byte: bytes) -> bytes:
     """Giải mã dữ liệu chế độ AES-128-ECB và gỡ đệm PKCS#7."""
+    if len(ban_ma) == 0 or (len(ban_ma) % 16 != 0):
+        raise ValueError("Bản mã ECB phải có độ dài là bội số dương của 16 byte.")
     ds_khoa_vong = mo_rong_khoa_aes128(khoa_16_byte)
     ban_ro_da_dem = bytearray()
     for i in range(0, len(ban_ma), 16):

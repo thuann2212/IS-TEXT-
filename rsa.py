@@ -138,7 +138,7 @@ def is_prime_miller_rabin(n: int, k: int = 40) -> bool:
     # Lặp kiểm thử Miller-Rabin qua k vòng
     for _ in range(k):
         # Chọn ngẫu nhiên cơ số a trong [2, n - 2]
-        a = secrets.randbelow(n - 4) + 2
+        a = secrets.randbelow(n - 3) + 2
         x = pow_mod(a, d, n)
         
         if x == 1 or x == n - 1:
@@ -203,15 +203,18 @@ def generate_keypair(key_size: int = 1024, e: int = 65537) -> Tuple[Dict[str, An
         raise ValueError("Kich thuoc khoa phai it nhat 16 bit.")
         
     half_bits = key_size // 2
+    other_bits = key_size - half_bits
     
     while True:
         p = generate_prime(half_bits)
-        q = generate_prime(half_bits)
+        q = generate_prime(other_bits)
         
-        # Đảm bảo p != q và chênh lệch |p - q| không quá nhỏ
+        # Đảm bảo p != q, n có đúng key_size bit và chênh lệch |p - q| không quá nhỏ
         diff = abs(p - q)
         if p != q and diff > (1 << (half_bits - 100 if half_bits > 100 else half_bits // 2)):
             n = p * q
+            if n.bit_length() != key_size:
+                continue
             phi = (p - 1) * (q - 1)
             
             # Kiểm tra e và phi(n) có nguyên tố cùng nhau hay không
@@ -384,7 +387,9 @@ def encrypt_text(plaintext: str, pubkey: Dict[str, Any], use_padding: bool = Tru
         if max_chunk <= 0:
             raise ValueError("Kich thuoc modulo qua nho de ap dung PKCS#1 v1.5 padding.")
     else:
-        max_chunk = mod_len - 1  # Đảm bảo giá trị số nguyên luôn < n
+        max_chunk = mod_len - 3  # 1 byte 0x00 (dam bao m < n) + 2 byte ghi do dai chunk
+        if max_chunk <= 0:
+            raise ValueError("Kich thuoc modulo qua nho de chia khoi raw.")
         
     cipher_chunks = []
     for i in range(0, len(raw_bytes), max_chunk):
@@ -392,9 +397,9 @@ def encrypt_text(plaintext: str, pubkey: Dict[str, Any], use_padding: bool = Tru
         if use_padding:
             padded_block = pkcs1_pad(chunk, mod_len)
         else:
-            # Đối với raw chunking, thêm tiền tố 2 byte ghi lại độ dài chunk để giải mã toàn vẹn
+            # Đối với raw chunking: 0x00 || chunk_len (2B) || chunk || 0x00... (cố định mod_len byte để đảm bảo m < n)
             chunk_len = len(chunk)
-            padded_block = chunk_len.to_bytes(2, byteorder="big") + chunk
+            padded_block = b'\x00' + chunk_len.to_bytes(2, byteorder="big") + chunk + bytes(max_chunk - chunk_len)
             
         m = int.from_bytes(padded_block, byteorder="big")
         c = rsa_encrypt_int(m, pubkey)
@@ -421,9 +426,9 @@ def decrypt_text(cipher_chunks: List[int], privkey: Dict[str, Any], use_padding:
         if use_padding:
             chunk = pkcs1_unpad(m_bytes, mod_len)
         else:
-            # Đọc 2 byte đầu ghi độ dài khối
-            chunk_len = int.from_bytes(m_bytes[:2], byteorder="big")
-            chunk = m_bytes[2:2 + chunk_len]
+            # Bỏ byte dẫn đầu 0x00, đọc 2 byte kế tiếp ghi độ dài khối
+            chunk_len = int.from_bytes(m_bytes[1:3], byteorder="big")
+            chunk = m_bytes[3:3 + chunk_len]
             
         recovered_bytes.extend(chunk)
         
