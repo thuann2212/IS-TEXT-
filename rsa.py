@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 ================================================================================
 HỆ THỐNG MẬT MÃ BẤT ĐỐI XỨNG RSA (RIVEST - SHAMIR - ADLEMAN)
@@ -31,16 +32,16 @@ def pow_mod(base: int, exp: int, mod: int) -> int:
       + Trong mỗi bước lặp, bình phương base (mod mod) và dịch phải exp (exp >>= 1).
     """
     if mod <= 0:
-        raise ValueError("Modulo phai la so nguyen duong lon hon 0.")
+        raise ValueError("Modulo phải là số nguyên dương lớn hơn 0.")
     if mod == 1:
         return 0
     if exp < 0:
-        raise ValueError("Ham pow_mod nay chi ho tro so mu khong am.")
-    
+        raise ValueError("Hàm pow_mod chỉ hỗ trợ số mũ không âm.")
+
     res = 1
     base = base % mod
     while exp > 0:
-        if exp & 1:  # Bit cuoi cung la 1 (exp le)
+        if exp & 1:  # Bit cuối cùng là 1 (exp lẻ)
             res = (res * base) % mod
         base = (base * base) % mod
         exp >>= 1
@@ -74,10 +75,12 @@ def mod_inverse(e: int, phi: int) -> int:
     Tức là tìm d sao cho: (e * d) mod phi = 1.
     Sử dụng nghiệm x từ phương trình Bezout của thuật toán Euclid mở rộng.
     """
-    gcd_val, x, _ = extended_gcd(e, phi)
+    if phi <= 1:
+        raise ValueError(f"Modulo phi phải lớn hơn 1 (phi={phi}).")
+    gcd_val, x, _ = extended_gcd(e % phi, phi)
     if gcd_val != 1:
-        raise ValueError(f"Khong ton tai nghich dao modulo: gcd({e}, {phi}) = {gcd_val} != 1")
-    return (x % phi + phi) % phi
+        raise ValueError(f"Không tồn tại nghịch đảo modulo: gcd({e}, {phi}) = {gcd_val} != 1.")
+    return x % phi
 
 
 # Bảng sàng số nguyên tố nhỏ (primes < 1000) nhằm loại bỏ nhanh 85% hợp số ngẫu nhiên
@@ -166,7 +169,7 @@ def generate_prime(bits: int) -> int:
     - Sử dụng bộ sinh số ngẫu nhiên an toàn mật mã `secrets`.
     """
     if bits < 8:
-        raise ValueError("Do dai bit toi thieu phai la 8 bit.")
+        raise ValueError("Độ dài bit tối thiểu của số nguyên tố phải là 8 bit.")
         
     while True:
         # Sinh số ngẫu nhiên có đúng `bits` bit
@@ -200,30 +203,39 @@ def generate_keypair(key_size: int = 1024, e: int = 65537) -> Tuple[Dict[str, An
         (public_key, private_key)
     """
     if key_size < 16:
-        raise ValueError("Kich thuoc khoa phai it nhat 16 bit.")
-        
+        raise ValueError("Kích thước khóa RSA tối thiểu phải là 16 bit.")
+    if e < 3 or (e % 2 == 0):
+        raise ValueError("Số mũ công khai e phải là số nguyên lẻ >= 3 (để nguyên tố cùng nhau với phi(n) chẵn).")
+    if e >= (1 << (key_size - 2)):
+        raise ValueError(f"Số mũ công khai e={e} quá lớn so với kích thước khóa {key_size}-bit (cần 1 < e < phi(n)).")
+
     half_bits = key_size // 2
     other_bits = key_size - half_bits
-    
+
     while True:
         p = generate_prime(half_bits)
         q = generate_prime(other_bits)
-        
-        # Đảm bảo p != q, n có đúng key_size bit và chênh lệch |p - q| không quá nhỏ
+
+        # Đảm bảo p != q, n có đúng key_size bit và chênh lệch |p - q| đủ lớn chống phân tích Fermat
         diff = abs(p - q)
         if p != q and diff > (1 << (half_bits - 100 if half_bits > 100 else half_bits // 2)):
             n = p * q
             if n.bit_length() != key_size:
                 continue
             phi = (p - 1) * (q - 1)
-            
+            if not (1 < e < phi):
+                continue
+
             # Kiểm tra e và phi(n) có nguyên tố cùng nhau hay không
             gcd_val, _, _ = extended_gcd(e, phi)
-            if gcd_val == 1:
-                break
-                
-    # Tính khóa bí mật d
-    d = mod_inverse(e, phi)
+            if gcd_val != 1:
+                continue
+
+            # Tính khóa bí mật d và kiểm tra ngưỡng an toàn chống tấn công Wiener (d > n^(1/4) / 3)
+            d = mod_inverse(e, phi)
+            if key_size >= 64 and (3 * d <= math.isqrt(math.isqrt(n))):
+                continue
+            break
     
     # Tính các tham số tối ưu hóa Định lý Thặng dư Trung Hoa (CRT)
     dp = d % (p - 1)
@@ -264,7 +276,7 @@ def rsa_encrypt_int(m: int, pubkey: Dict[str, Any]) -> int:
     n = pubkey["n"]
     e = pubkey["e"]
     if m < 0 or m >= n:
-        raise ValueError(f"Thong diep nguyen m phai thoa man 0 <= m < n (m={m.bit_length()} bits, n={n.bit_length()} bits)")
+        raise ValueError(f"Thông điệp nguyên m phải thỏa mãn 0 <= m < n (m={m.bit_length()} bits, n={n.bit_length()} bits).")
     return pow_mod(m, e, n)
 
 
@@ -281,7 +293,7 @@ def rsa_decrypt_int(c: int, privkey: Dict[str, Any], use_crt: bool = True) -> in
     """
     n = privkey["n"]
     if c < 0 or c >= n:
-        raise ValueError("Ban ma c khong hop le trong Z_n.")
+        raise ValueError("Bản mã c không hợp lệ trong vành Z_n (cần 0 <= c < n).")
         
     if not use_crt or "p" not in privkey:
         d = privkey["d"]
@@ -317,11 +329,13 @@ def pkcs1_pad(data: bytes, target_len: int) -> bytes:
     - 0x00: Byte phân cách giữa phần đệm và dữ liệu gốc.
     - target_len: Kích thước khối theo byte, bằng ceil(key_size_in_bits / 8).
     """
+    if target_len < 11:
+        raise ValueError("Kích thước khối đích target_len phải tối thiểu 11 byte theo chuẩn PKCS#1 v1.5.")
     data_len = len(data)
     # Cần tối thiểu 11 byte overhead: 1 (0x00) + 1 (0x02) + >=8 (PS) + 1 (0x00)
     if data_len > target_len - 11:
-        raise ValueError(f"Do dai du lieu ({data_len} bytes) vuot qua gioi han khoi ({target_len - 11} bytes)")
-        
+        raise ValueError(f"Độ dài dữ liệu ({data_len} bytes) vượt quá giới hạn khối ({target_len - 11} bytes).")
+
     ps_len = target_len - data_len - 3
     # Sinh chuỗi PS ngẫu nhiên không chứa byte 0x00
     ps = bytearray()
@@ -329,82 +343,84 @@ def pkcs1_pad(data: bytes, target_len: int) -> bytes:
         rand_byte = secrets.randbelow(256)
         if rand_byte != 0:
             ps.append(rand_byte)
-            
+
     return b'\x00\x02' + bytes(ps) + b'\x00' + data
 
 
 def pkcs1_unpad(padded: bytes, target_len: int) -> bytes:
     """
-    Giải đệm chuẩn PKCS#1 v1.5:
-    Kiểm tra cấu trúc 0x00 || 0x02 || PS || 0x00 || Data và trích xuất Data nguyên bản.
+    Giải đệm chuẩn PKCS#1 v1.5 (RFC 8017 Section 7.2.2):
+    Kiểm tra cấu trúc 0x00 || 0x02 || PS (>= 8 bytes != 0x00) || 0x00 || Data.
+    Quét toàn bộ khối không thoát sớm và chỉ ném một thông báo lỗi thống nhất
+    nhằm phòng chống tấn công Bleichenbacher Padding Oracle.
     """
+    if target_len < 11:
+        raise ValueError("Kích thước khối đích target_len phải tối thiểu 11 byte.")
+    if len(padded) == target_len - 1 and padded[0] == 0x02:
+        padded = b'\x00' + padded
     if len(padded) != target_len:
-        # Nếu thiếu byte 0x00 dẫn đầu do chuyển từ số nguyên sang byte
-        if len(padded) == target_len - 1 and padded[0] == 0x02:
-            padded = b'\x00' + padded
-        else:
-            raise ValueError("Kich thuoc khoi da dem khong dung target_len.")
-            
-    if padded[0] != 0x00 or padded[1] != 0x02:
-        raise ValueError("Dinh dang tieu de PKCS#1 v1.5 khong hop le (phai bat dau bang 0x00 0x02).")
-        
-    # Tìm byte phân cách 0x00 đầu tiên sau PS (bắt đầu tìm từ vị trí index 2)
+        raise ValueError("Giải đệm PKCS#1 v1.5 không hợp lệ.")
+
+    bad = (padded[0] ^ 0x00) | (padded[1] ^ 0x02)
     sep_idx = -1
-    for i in range(2, len(padded)):
-        if padded[i] == 0x00:
+    found_sep = 0
+    for i in range(2, target_len):
+        is_zero = 1 if padded[i] == 0x00 else 0
+        if is_zero and not found_sep:
             sep_idx = i
-            break
-            
-    if sep_idx == -1:
-        raise ValueError("Khong tim thay byte phan cach 0x00 trong khoi dem.")
-        
-    # Độ dài chuỗi đệm PS phải tối thiểu 8 byte
-    if sep_idx - 2 < 8:
-        raise ValueError("Chuoi padding PS qua ngan (< 8 bytes), vi pham chuan PKCS#1 v1.5.")
-        
+            found_sep = 1
+
+    if not found_sep or (sep_idx - 2 < 8):
+        bad |= 1
+
+    if bad != 0:
+        raise ValueError("Giải đệm PKCS#1 v1.5 không hợp lệ.")
+
     return padded[sep_idx + 1:]
 
 
 def encrypt_text(plaintext: str, pubkey: Dict[str, Any], use_padding: bool = True) -> List[int]:
     """
-    Mã hóa chuỗi ký tự bất kỳ (hỗ trợ đầy đủ Unicode / UTF-8 tiếng Việt):
+    Mã hóa chuỗi ký tự bất kỳ (hỗ trợ đầy đủ Unicode / UTF-8 tiếng Việt, kể cả chuỗi rỗng):
     1. Mã hóa văn bản sang mảng byte UTF-8.
     2. Xác định kích thước khối k = (n.bit_length() + 7) // 8.
     3. Chia nhỏ dữ liệu thành các khối thích hợp:
        - Nếu use_padding == True: Mỗi khối có kích thước tối đa k - 11 bytes, được đệm PKCS#1 v1.5.
-       - Nếu use_padding == False (Raw chunking): Mỗi khối tối đa k - 1 bytes, không dùng đệm.
+       - Nếu use_padding == False (Raw chunking): Mỗi khối tối đa k - 3 bytes theo cấu trúc
+         0x00 || chunk_len (2B) || chunk || 0x00... (cố định k byte để đảm bảo m < n và bảo toàn byte 0x00 đầu).
     4. Chuyển mỗi khối byte thành số nguyên m < n theo thứ tự big-endian.
     5. Mã hóa từng khối c = (m^e) mod n.
-    
+
     Trả về:
         Danh sách các số nguyên bản mã [c_0, c_1, ...]
     """
     raw_bytes = plaintext.encode("utf-8")
     mod_len = (pubkey["n"].bit_length() + 7) // 8
-    
+
     if use_padding:
         max_chunk = mod_len - 11
         if max_chunk <= 0:
-            raise ValueError("Kich thuoc modulo qua nho de ap dung PKCS#1 v1.5 padding.")
+            raise ValueError("Kích thước modulo quá nhỏ để áp dụng chuẩn đệm PKCS#1 v1.5.")
     else:
-        max_chunk = mod_len - 3  # 1 byte 0x00 (dam bao m < n) + 2 byte ghi do dai chunk
-        if max_chunk <= 0:
-            raise ValueError("Kich thuoc modulo qua nho de chia khoi raw.")
-        
+        max_chunk = mod_len - 3  # 1 byte 0x00 (đảm bảo m < n) + 2 byte ghi độ dài chunk
+        if max_chunk <= 0 or max_chunk > 65535:
+            raise ValueError("Kích thước modulo không hợp lệ cho chế độ chia khối thô (raw chunking).")
+
+    # Đảm bảo chuỗi rỗng "" vẫn được đóng gói và mã hóa thành 1 khối hợp lệ thay vì danh sách rỗng
+    chunks = [b""] if len(raw_bytes) == 0 else [raw_bytes[i:i + max_chunk] for i in range(0, len(raw_bytes), max_chunk)]
+
     cipher_chunks = []
-    for i in range(0, len(raw_bytes), max_chunk):
-        chunk = raw_bytes[i:i + max_chunk]
+    for chunk in chunks:
         if use_padding:
             padded_block = pkcs1_pad(chunk, mod_len)
         else:
-            # Đối với raw chunking: 0x00 || chunk_len (2B) || chunk || 0x00... (cố định mod_len byte để đảm bảo m < n)
             chunk_len = len(chunk)
             padded_block = b'\x00' + chunk_len.to_bytes(2, byteorder="big") + chunk + bytes(max_chunk - chunk_len)
-            
+
         m = int.from_bytes(padded_block, byteorder="big")
         c = rsa_encrypt_int(m, pubkey)
         cipher_chunks.append(c)
-        
+
     return cipher_chunks
 
 
@@ -413,25 +429,31 @@ def decrypt_text(cipher_chunks: List[int], privkey: Dict[str, Any], use_padding:
     Giải mã danh sách các khối số nguyên bản mã trở lại văn bản UTF-8 gốc:
     1. Giải mã từng số nguyên c: m = (c^d) mod n (dùng CRT để tăng tốc).
     2. Chuyển số nguyên m thành mảng byte có độ dài mod_len.
-    3. Gỡ bỏ đệm PKCS#1 v1.5 (hoặc bóc tách độ dài đối với raw chunking).
+    3. Gỡ bỏ đệm PKCS#1 v1.5 (hoặc kiểm tra khung và bóc tách độ dài đối với raw chunking).
     4. Ghép nối các khối byte và giải mã UTF-8 trở lại chuỗi văn bản.
     """
+    if not cipher_chunks:
+        raise ValueError("Danh sách khối bản mã không được rỗng.")
     mod_len = (privkey["n"].bit_length() + 7) // 8
+    max_raw_chunk = mod_len - 3
     recovered_bytes = bytearray()
-    
+
     for c in cipher_chunks:
         m = rsa_decrypt_int(c, privkey, use_crt=use_crt)
         m_bytes = m.to_bytes(mod_len, byteorder="big")
-        
+
         if use_padding:
             chunk = pkcs1_unpad(m_bytes, mod_len)
         else:
-            # Bỏ byte dẫn đầu 0x00, đọc 2 byte kế tiếp ghi độ dài khối
+            if max_raw_chunk <= 0 or m_bytes[0] != 0x00:
+                raise ValueError("Khối giải mã thô (raw chunk) bị hỏng hoặc sai khóa.")
             chunk_len = int.from_bytes(m_bytes[1:3], byteorder="big")
+            if chunk_len > max_raw_chunk or any(b != 0 for b in m_bytes[3 + chunk_len:]):
+                raise ValueError("Độ dài hoặc phần đệm 0x00 của khối giải mã thô không hợp lệ.")
             chunk = m_bytes[3:3 + chunk_len]
-            
+
         recovered_bytes.extend(chunk)
-        
+
     return recovered_bytes.decode("utf-8")
 
 
@@ -455,26 +477,26 @@ def verify_hand_calculation_example():
     
     # 1. Tính nghịch đảo
     d = mod_inverse(e, phi)
-    print(f"1. Tham số hệ thống:")
+    print("1. Tham số hệ thống:")
     print(f"   p = {p}, q = {q}")
     print(f"   n = p * q = {n}")
     print(f"   phi(n) = (p - 1)*(q - 1) = {phi}")
-    print(f"   Khoa cong khai (e, n): ({e}, {n})")
-    print(f"   Khoa bi mat   (d, n): ({d}, {n})")
-    print(f"   Kiem tra e*d mod phi(n): ({e} * {d}) mod {phi} = {(e * d) % phi}")
-    
+    print(f"   Khóa công khai (e, n): ({e}, {n})")
+    print(f"   Khóa bí mật    (d, n): ({d}, {n})")
+    print(f"   Kiểm tra e*d mod phi(n): ({e} * {d}) mod {phi} = {(e * d) % phi}")
+
     # 2. Mã hóa ký tự 'A' (ASCII = 65)
     m = 65
     c = pow_mod(m, e, n)
-    print(f"\n2. Ma hoa thong diep so m = {m} (ASCII 'A'):")
+    print(f"\n2. Mã hóa thông điệp số m = {m} (ASCII 'A'):")
     print(f"   c = m^e mod n = {m}^{e} mod {n} = {c}")
-    
+
     # 3. Giải mã
     m_dec = pow_mod(c, d, n)
-    print(f"\n3. Giai ma ban ma c = {c}:")
+    print(f"\n3. Giải mã bản mã c = {c}:")
     print(f"   m = c^d mod n = {c}^{d} mod {n} = {m_dec}")
     assert m == m_dec, "Lỗi giải mã ví dụ tính tay!"
-    print("   -> KET QUA: GIAI MA CHINH XAC 100%!")
+    print("   -> KẾT QUẢ: GIẢI MÃ CHÍNH XÁC 100%!")
 
 
 def benchmark_rsa_performance():
@@ -484,47 +506,47 @@ def benchmark_rsa_performance():
       trên các kích thước khóa phổ biến: 512-bit, 1024-bit và 2048-bit.
     """
     test_message = (
-        "Khoa Cong nghe Thong tin - Do an An toan thong tin RSA. "
-        "Sinh vien: Tran Gia Thuan. Ma hoa chuoi ky tu tieng Viet: "
+        "Khoa Công nghệ Thông tin - Đồ án An toàn thông tin RSA. "
+        "Sinh viên: Trần Gia Thuận. Mã hóa chuỗi ký tự tiếng Việt: "
         "Bảo mật thông tin là nền tảng của chuyển đổi số quốc gia!"
     )
-    
+
     key_sizes = [512, 1024, 2048]
     results = []
-    
+
     print("\n" + "="*85)
     print("ĐÁNH GIÁ THỰC NGHIỆM HIỆU NĂNG TÍNH TOÁN RSA TRÊN CÁC KÍCH THƯỚC KHÓA")
-    print(f"Thong diep thu nghiem ({len(test_message)} ky tu): \"{test_message[:45]}...\"")
+    print(f"Thông điệp thử nghiệm ({len(test_message)} ký tự, {len(test_message.encode('utf-8'))} bytes UTF-8): \"{test_message[:45]}...\"")
     print("="*85)
-    
+
     for bits in key_sizes:
-        print(f"\n[*] Dang danh gia khoa {bits}-bit...")
-        
+        print(f"\n[*] Đang đánh giá khóa {bits}-bit...")
+
         # 1. Đo thời gian sinh khóa
         t0 = time.perf_counter()
         pub, priv = generate_keypair(key_size=bits, e=65537)
         t_keygen = (time.perf_counter() - t0) * 1000.0  # ms
-        
+
         # 2. Đo thời gian mã hóa (có đệm PKCS#1 v1.5)
         t0 = time.perf_counter()
         cipher_blocks = encrypt_text(test_message, pub, use_padding=True)
         t_enc = (time.perf_counter() - t0) * 1000.0  # ms
-        
+
         # 3. Đo thời gian giải mã chuẩn (không dùng CRT)
         t0 = time.perf_counter()
         dec_std = decrypt_text(cipher_blocks, priv, use_padding=True, use_crt=False)
         t_dec_std = (time.perf_counter() - t0) * 1000.0  # ms
-        
+
         # 4. Đo thời gian giải mã tăng tốc CRT
         t0 = time.perf_counter()
         dec_crt = decrypt_text(cipher_blocks, priv, use_padding=True, use_crt=True)
         t_dec_crt = (time.perf_counter() - t0) * 1000.0  # ms
-        
+
         # Kiểm tra tính toàn vẹn
-        assert test_message == dec_std == dec_crt, f"Loi tinh toan ven o muc khoa {bits}-bit!"
-        
+        assert test_message == dec_std == dec_crt, f"Lỗi tính toàn vẹn ở mức khóa {bits}-bit!"
+
         speedup = t_dec_std / t_dec_crt if t_dec_crt > 0 else 1.0
-        
+
         results.append({
             "bits": bits,
             "keygen_ms": t_keygen,
@@ -534,14 +556,14 @@ def benchmark_rsa_performance():
             "speedup": speedup,
             "blocks": len(cipher_blocks)
         })
-        
+
     print("\n" + "="*85)
     print(f"{'Kích thước':<12} | {'Sinh khóa':<12} | {'Mã hóa':<12} | {'Giải mã chuẩn':<14} | {'Giải mã CRT':<13} | {'Gia tốc CRT':<10}")
     print("-"*85)
     for r in results:
         print(f"{r['bits']}-bit{'':<6} | {r['keygen_ms']:>8.2f} ms | {r['enc_ms']:>8.2f} ms | {r['dec_std_ms']:>10.2f} ms | {r['dec_crt_ms']:>9.2f} ms | {r['speedup']:>8.2f}x")
     print("="*85)
-    print("Ghi chu: Tốc độ giải mã với CRT tăng gấp ~3.5x - 4x so với giải mã chuẩn.")
+    print("Ghi chú: Tốc độ giải mã với CRT tăng gấp ~3.0x - 4.0x so với giải mã chuẩn.")
     return results
 
 

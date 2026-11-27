@@ -153,11 +153,15 @@ def kiem_chung_sbox_tu_nguyen_ly_goc() -> bool:
 
 def bytes_sang_state(khoi_16_byte: bytes) -> list:
     """Chuyển chuỗi 16 byte thành ma trận trạng thái 4x4 (S[dòng][cột]) theo chuẩn cột."""
+    if not isinstance(khoi_16_byte, (bytes, bytearray, memoryview)) or len(khoi_16_byte) != 16:
+        raise ValueError("Khối dữ liệu trạng thái AES bắt buộc phải có độ dài đúng 16 byte (128 bit).")
     return [[khoi_16_byte[r + 4 * c] for c in range(4)] for r in range(4)]
 
 
 def state_sang_bytes(state: list) -> bytes:
     """Chuyển ma trận trạng thái 4x4 (S[dòng][cột]) ngược lại thành chuỗi 16 byte."""
+    if len(state) != 4 or any(len(dong) != 4 for dong in state):
+        raise ValueError("Ma trận trạng thái AES bắt buộc phải có kích thước 4x4.")
     return bytes(state[r][c] for c in range(4) for r in range(4))
 
 
@@ -287,7 +291,7 @@ def mo_rong_khoa_aes128(khoa_16_byte: bytes) -> list:
     tổng cộng 44 từ 32-bit (W[0..43]), mỗi từ là danh sách 4 byte.
     Trả về danh sách 11 ma trận khóa vòng 4x4 (theo thứ tự cột chuẩn của AES).
     """
-    if len(khoa_16_byte) != 16:
+    if not isinstance(khoa_16_byte, (bytes, bytearray, memoryview)) or len(khoa_16_byte) != 16:
         raise ValueError("Khóa AES-128 bắt buộc phải có độ dài đúng 16 byte (128 bit).")
 
     # Bước 1: 4 từ đầu tiên W[0..3] được tách trực tiếp từ khóa gốc 16 byte
@@ -326,6 +330,8 @@ def ma_hoa_khoi_16byte(khoi_ro_16_byte: bytes, ds_khoa_vong: list) -> bytes:
     - Vòng 1 đến 9: SubBytes -> ShiftRows -> MixColumns -> AddRoundKey(RoundKey[r])
     - Vòng 10 (Cuối): SubBytes -> ShiftRows -> AddRoundKey(RoundKey[10]) (Không có MixColumns)
     """
+    if len(ds_khoa_vong) != 11:
+        raise ValueError("Danh sách khóa vòng AES-128 bắt buộc phải gồm đúng 11 khóa vòng (RoundKey 0..10).")
     state = bytes_sang_state(khoi_ro_16_byte)
 
     # Vòng 0: AddRoundKey ban đầu
@@ -353,6 +359,8 @@ def giai_ma_khoi_16byte(khoi_ma_16_byte: bytes, ds_khoa_vong: list) -> bytes:
     - Vòng 9 xuống 1: InvShiftRows -> InvSubBytes -> AddRoundKey(RoundKey[r]) -> InvMixColumns
     - Vòng 0 (Cuối): InvShiftRows -> InvSubBytes -> AddRoundKey(RoundKey[0])
     """
+    if len(ds_khoa_vong) != 11:
+        raise ValueError("Danh sách khóa vòng AES-128 bắt buộc phải gồm đúng 11 khóa vòng (RoundKey 0..10).")
     state = bytes_sang_state(khoi_ma_16_byte)
 
     # Bước đảo vòng 10
@@ -384,22 +392,40 @@ def dem_pkcs7(du_lieu: bytes, kich_thuoc_khoi: int = 16) -> bytes:
     - Nếu độ dài dữ liệu đã chia hết cho 16, vẫn đệm thêm nguyên 1 khối 16 byte có giá trị 0x10.
     - Mỗi byte đệm đều mang giá trị bằng chính pad_len (1 <= pad_len <= 16).
     """
+    if not isinstance(du_lieu, (bytes, bytearray, memoryview)):
+        raise TypeError("Dữ liệu cần đệm PKCS#7 phải là kiểu bytes, bytearray hoặc memoryview.")
+    if not (1 <= kich_thuoc_khoi <= 255):
+        raise ValueError("Kích thước khối PKCS#7 phải nằm trong khoảng [1, 255] byte.")
     so_byte_dem = kich_thuoc_khoi - (len(du_lieu) % kich_thuoc_khoi)
-    return du_lieu + bytes([so_byte_dem] * so_byte_dem)
+    return bytes(du_lieu) + bytes([so_byte_dem] * so_byte_dem)
 
 
 def bo_dem_pkcs7(du_lieu_da_dem: bytes, kich_thuoc_khoi: int = 16) -> bytes:
     """
     Kiểm tra tính hợp lệ và gỡ bỏ phần đệm PKCS#7 sau khi giải mã.
+    Sử dụng vòng lặp tích lũy bit không rẽ nhánh sớm trên khối cuối và một thông báo lỗi
+    đồng nhất nhằm giảm thiểu rò rỉ kênh kề thời gian (Padding Oracle).
     """
-    if not du_lieu_da_dem or (len(du_lieu_da_dem) % kich_thuoc_khoi != 0):
-        raise ValueError("Dữ liệu giải mã có độ dài không hợp lệ (không phải bội của 16 byte).")
-    so_byte_dem = du_lieu_da_dem[-1]
-    if so_byte_dem < 1 or so_byte_dem > kich_thuoc_khoi:
-        raise ValueError(f"Giá trị byte đệm PKCS#7 không hợp lệ: {so_byte_dem}.")
-    if du_lieu_da_dem[-so_byte_dem:] != bytes([so_byte_dem] * so_byte_dem):
-        raise ValueError("Các byte đệm PKCS#7 bị lỗi hoặc sai khóa giải mã.")
-    return du_lieu_da_dem[:-so_byte_dem]
+    if not isinstance(du_lieu_da_dem, (bytes, bytearray, memoryview)):
+        raise TypeError("Dữ liệu giải mã phải là kiểu bytes, bytearray hoặc memoryview.")
+    if not (1 <= kich_thuoc_khoi <= 255):
+        raise ValueError("Kích thước khối PKCS#7 phải nằm trong khoảng [1, 255] byte.")
+    du_lieu_bytes = bytes(du_lieu_da_dem)
+    if not du_lieu_bytes or (len(du_lieu_bytes) % kich_thuoc_khoi != 0):
+        raise ValueError("Dữ liệu giải mã có độ dài không hợp lệ (không phải bội số dương của kích thước khối).")
+
+    so_byte_dem = du_lieu_bytes[-1]
+    loi = 0 if (1 <= so_byte_dem <= kich_thuoc_khoi) else 1
+    # Quét toàn bộ khối cuối cùng không rẽ nhánh sớm
+    khoi_cuoi = du_lieu_bytes[-kich_thuoc_khoi:]
+    for idx in range(kich_thuoc_khoi):
+        # Byte tại vị trí idx thuộc vùng đệm khi idx >= kich_thuoc_khoi - so_byte_dem
+        thuoc_vung_dem = 1 if (idx >= kich_thuoc_khoi - so_byte_dem and loi == 0) else 0
+        loi |= thuoc_vung_dem * (khoi_cuoi[idx] ^ so_byte_dem)
+
+    if loi != 0:
+        raise ValueError("Đệm PKCS#7 không hợp lệ hoặc sai khóa giải mã.")
+    return du_lieu_bytes[:-so_byte_dem]
 
 
 def ma_hoa_aes128_cbc(ban_ro: bytes, khoa_16_byte: bytes, iv_16_byte: bytes) -> bytes:

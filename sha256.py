@@ -70,7 +70,10 @@ def rotr(x: int, n: int) -> int:
     Phép xoay phải bit (Rotate Right - ROTR^n(x)) trên từ 32-bit:
     Công thức: ROTR^n(x) = (x >> n) OR (x << (32 - n)) mod 2^32
     """
-    return ((x >> n) | (x << (32 - n))) & MASK_32
+    if not (0 <= n < 32):
+        raise ValueError("Số bit xoay phải n bắt buộc nằm trong khoảng [0, 31].")
+    x &= MASK_32
+    return ((x >> n) | (x << ((32 - n) & 31))) & MASK_32
 
 
 def shr(x: int, n: int) -> int:
@@ -78,6 +81,8 @@ def shr(x: int, n: int) -> int:
     Phép dịch phải logic (Right Shift - SHR^n(x)) trên từ 32-bit:
     Công thức: SHR^n(x) = x >> n
     """
+    if not (0 <= n < 32):
+        raise ValueError("Số bit dịch phải n bắt buộc nằm trong khoảng [0, 31].")
     return (x & MASK_32) >> n
 
 
@@ -145,7 +150,11 @@ def dem_thong_diep(du_lieu_bytes: bytes) -> bytes:
     3. Gắn độ dài gốc l (tính bằng số bit = len_bytes * 8) dưới dạng
        số nguyên 64-bit không dấu theo thứ tự Big-Endian (>Q).
     """
+    if not isinstance(du_lieu_bytes, (bytes, bytearray, memoryview)):
+        raise TypeError("Đầu vào của SHA-256 phải là kiểu bytes, bytearray hoặc memoryview.")
     do_dai_bit = len(du_lieu_bytes) * 8
+    if do_dai_bit >= (1 << 64):
+        raise ValueError("Độ dài thông điệp vượt quá giới hạn tối đa 2^64 - 1 bit của chuẩn FIPS 180-4.")
     ket_qua = bytearray(du_lieu_bytes)
 
     # Bước 1: Thêm byte 0x80 (10000000_2)
@@ -164,6 +173,8 @@ def chia_khoi_512bit(du_lieu_da_dem: bytes) -> list:
     """
     Chia thông điệp đã đệm thành danh sách các khối 512-bit (64 byte).
     """
+    if len(du_lieu_da_dem) == 0 or (len(du_lieu_da_dem) % 64 != 0):
+        raise ValueError("Dữ liệu đã đệm phải có độ dài là bội số dương của 64 byte (512 bit).")
     return [du_lieu_da_dem[i:i + 64] for i in range(0, len(du_lieu_da_dem), 64)]
 
 
@@ -176,6 +187,10 @@ def nen_mot_khoi(khoi_64_byte: bytes, trang_thai_h: list) -> list:
     Thực hiện mở rộng thông điệp thành 64 từ W[0..63] và chạy 64 vòng nén
     trên một khối 512-bit.
     """
+    if len(khoi_64_byte) != 64:
+        raise ValueError("Mỗi khối đầu vào hàm nén SHA-256 phải có độ dài đúng 64 byte (512 bit).")
+    if len(trang_thai_h) != 8:
+        raise ValueError("Vector trạng thái băm H phải gồm đúng 8 thanh ghi 32-bit.")
     # 1. Tạo lịch trình thông điệp (Message Schedule) W[0..63]
     # 16 từ đầu tiên (W[0..15]) tách trực tiếp từ khối 64 byte theo Big-Endian (>16I)
     w = list(struct.unpack(">16I", khoi_64_byte)) + [0] * 48
@@ -285,7 +300,7 @@ def main():
     print("Sinh viên: Trần Gia Thuận | Chữ số cuối SID: 3")
     print("=" * 76)
 
-    # 1. Kiểm thử với vector chuẩn FIPS 180-4
+    # 1. Kiểm thử với vector chuẩn FIPS 180-4 (bao gồm rỗng, 1 khối và đa khối biên 448-bit)
     vector_kiem_thu = [
         (
             b"",
@@ -294,6 +309,10 @@ def main():
         (
             b"abc",
             "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+        ),
+        (
+            b"abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq",
+            "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1",
         ),
     ]
     print("\n[1] KIỂM CHỨNG VECTOR TIÊU CHUẨN:")

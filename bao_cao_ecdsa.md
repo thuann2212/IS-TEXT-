@@ -1,8 +1,9 @@
 # BÁO CÁO ĐỒ ÁN AN TOÀN THÔNG TIN: CHỮ KÝ SỐ ĐƯỜNG CONG ELLIPTIC (ECDSA)
 
 - **Họ và tên sinh viên**: Trần Gia Thuận
-- **Chữ số cuối SID**: 3 (3 mod 4 = 3 $\rightarrow$ Phân công đề tài: **Chữ ký số: ECDSA - Elliptic Curve Digital Signature Algorithm**)
-- **Mã nguồn thực nghiệm**: [ecdsa.py](file:///d:/HOCTAP/IS(Text)/ecdsa.py) (kết nối trực tiếp cùng [sha256.py](file:///d:/HOCTAP/IS(Text)/sha256.py), đối chiếu cùng [rsa.py](file:///d:/HOCTAP/IS(Text)/rsa.py) và [aes128.py](file:///d:/HOCTAP/IS(Text)/aes128.py))
+- **Chữ số cuối SID**: 3 ($3 \bmod 4 = 3 \rightarrow$ Phân công đề tài: **Chữ ký số: ECDSA – Elliptic Curve Digital Signature Algorithm**)
+- **Ngôn ngữ & Môi trường thực thi**: Python thuần 3.12 (cài đặt từ nguyên lý gốc — *From First Principles*, không sử dụng thư viện mật mã có sẵn)
+- **Mã nguồn thực nghiệm**: [ecdsa.py](./ecdsa.py) (kết nối trực tiếp cùng [sha256.py](./sha256.py), đối chiếu cùng [rsa.py](./rsa.py) và [aes128.py](./aes128.py))
 
 ---
 
@@ -29,14 +30,12 @@ Năm 1985, hai nhà toán học độc lập:
 
 ```mermaid
 flowchart TD
-    A["Khủng hoảng kích thước khóa (Thập niên 1980)"] --> B["Thuật toán sàng GNFS ra đời\nĐộ phức tạp Bán hàm mũ Sub-exponential"]
-    B --> C["RSA/DSA buộc phải tăng kích thước khóa:\n1024b -> 2048b -> 3072b -> 4096b"]
+    A["Khủng hoảng kích thước khóa (Thập niên 1980)"] --> B["Thuật toán sàng GNFS ra đời (Bán hàm mũ Sub-exponential)"]
+    B --> C["RSA/DSA buộc phải tăng khóa: 1024b -> 2048b -> 3072b -> 4096b"]
     C --> D["Nghẽn băng thông, cạn kiệt pin IoT, thẻ chip quá tải"]
-    
-    E["Phát minh ECC (1985)\nNeal Koblitz & Victor Miller"] --> F["Đưa bài toán Logarit rời rạc lên nhóm điểm Elliptic (ECDLP)"]
-    F --> G["Thuật toán tấn công tốt nhất chỉ đạt Hàm mũ đầy đủ O(sqrt(n))\nIndex Calculus KHÔNG áp dụng được!"]
-    
-    G --> H["ECDSA (1998 - 2005)\nChuẩn hóa quốc tế ANSI X9.62 / FIPS 186\nKhóa 256-bit an toàn ngang RSA 3072-bit!"]
+    E["Phát minh ECC (1985) - Neal Koblitz & Victor Miller"] --> F["Đưa bài toán Logarit rời rạc lên nhóm điểm Elliptic (ECDLP)"]
+    F --> G["Tấn công tốt nhất chỉ đạt Hàm mũ đầy đủ O(sqrt(n)) - Index Calculus vô hiệu"]
+    G --> H["ECDSA (ANSI X9.62 / FIPS 186): Khóa 256-bit an toàn ngang RSA 3072-bit"]
 ```
 
 ### 1.2. Quá trình chuẩn hóa ECDSA (1998 - 2005)
@@ -84,11 +83,11 @@ $$E(\mathbb{F}_p) = \left\{ (x, y) \in \mathbb{F}_p^2 \mid y^2 \equiv x^3 + ax +
 flowchart LR
     subgraph CurveDef["Phương trình Weierstrass trên F_p"]
         E["y² ≡ x³ + ax + b (mod p)"]
-        Delta["Điều kiện không suy biến:\n4a³ + 27b² ≢ 0 (mod p)"]
+        Delta["Không suy biến: 4a³ + 27b² ≢ 0 (mod p)"]
     end
     subgraph Points["Tập hợp điểm E(F_p)"]
         P1["Điểm Affine: P(x, y)"]
-        O["Điểm vô cực O\n(Identity Element)"]
+        O["Điểm vô cực O (Identity Element)"]
     end
     CurveDef --> Points
 ```
@@ -104,10 +103,10 @@ Trên mặt phẳng liên tục, tổng của hai điểm $P$ và $Q$ được x
 
 ```mermaid
 flowchart TD
-    A["Hai điểm P và Q trên đường cong"] --> B{"P == Q ?"}
-    B -- "Không (P ≠ Q)" --> C["Kẻ đường thẳng cắt cát tuyến qua P và Q (Point Addition)\nĐộ dốc λ = (y_Q - y_P) / (x_Q - x_P) mod p"]
-    B -- "Có (P == Q)" --> D["Kẻ tiếp tuyến tại điểm P (Point Doubling)\nĐộ dốc λ = (3x_P² + a) / (2y_P) mod p"]
-    C --> E["Tìm giao điểm thứ ba R'\nLấy đối xứng qua trục Ox:\nx_R = λ² - x_P - x_Q mod p\ny_R = λ(x_P - x_R) - y_P mod p"]
+    A["Hai điểm P và Q trên đường cong"] --> B{"P trùng Q ?"}
+    B -- "Không (P ≠ Q)" --> C["Cát tuyến qua P, Q (Point Addition): λ = (y_Q - y_P) / (x_Q - x_P) mod p"]
+    B -- "Có (P = Q)" --> D["Tiếp tuyến tại P (Point Doubling): λ = (3x_P² + a) / (2y_P) mod p"]
+    C --> E["Giao điểm R' đối xứng qua Ox: x_R = λ² - x_P - x_Q mod p, y_R = λ(x_P - x_R) - y_P mod p"]
     D --> E
     E --> F["Kết quả: R = P + Q"]
 ```
@@ -145,7 +144,7 @@ Cho hai điểm $P = (x_1, y_1)$ và $Q = (x_2, y_2)$ thuộc $E(\mathbb{F}_p)$:
    \end{cases}$$
 
 #### 2.2.3. Kiểm chứng các tiên đề nhóm Abel
-Hệ thống $(E(\mathbb{F}_p), +)$ thỏa mãn đầy đủ 4 tiên đề nhóm cộng Abel:
+Hệ thống $(E(\mathbb{F}_p), +)$ thỏa mãn đầy đủ 5 tiên đề của nhóm cộng giao hoán (nhóm Abel):
 - **Tính đóng (Closure)**: $\forall P, Q \in E(\mathbb{F}_p) \implies P + Q \in E(\mathbb{F}_p)$.
 - **Tính kết hợp (Associativity)**: $\forall P, Q, R \in E(\mathbb{F}_p) \implies (P + Q) + R = P + (Q + R)$.
 - **Phần tử trung hòa (Identity Element)**: Tồn tại $\mathcal{O}$ sao cho $P + \mathcal{O} = P$.
@@ -213,11 +212,14 @@ sequenceDiagram
     autonumber
     actor Alice as Người ký (Alice - Chủ khóa)
     actor Bob as Người xác minh (Bob - Công chúng)
-    Note over Alice: 1. Sinh khóa (KeyGen)<br/>Chọn khóa riêng d ngẫu nhiên trong [1, n-1]<br/>Tính khóa công khai Q = d * G (Double-and-Add)
-    Alice->>Bob: Công khai Q(x, y) và bộ tham số miền (p, a, b, G, n)
-    Note over Alice: 2. Tạo chữ ký số (Sign)<br/>Băm thông điệp z = SHA-256(m)<br/>Chọn nonce bí mật k ngẫu nhiên trong [1, n-1]<br/>Tính R(x1, y1) = k * G<br/>r = x1 mod n<br/>s = k^(-1) * (z + r * d) mod n
+    Note over Alice: 1. Sinh khóa: chọn d thuộc [1, n-1], tính Q = d * G
+    Alice->>Bob: Công khai Q(x, y) và bộ tham số miền (p, a, b, G, n, h)
+    Note over Alice: 2. Ký số: z = SHA-256(m), chọn nonce k thuộc [1, n-1]
+    Note over Alice: Tính R(x1, y1) = k * G, r = x1 mod n, s = k^(-1)*(z + r*d) mod n
     Alice->>Bob: Gửi Thông điệp m kèm Chữ ký số (r, s)
-    Note over Bob: 3. Xác minh chữ ký (Verify)<br/>Kiểm tra 1 <= r, s < n và Q on curve<br/>Tính z = SHA-256(m)<br/>Tính w = s^(-1) mod n<br/>Tính u1 = z * w mod n, u2 = r * w mod n<br/>Tính điểm P = u1 * G + u2 * Q = (x_P, y_P)<br/>Xác nhận: x_P mod n == r ?
+    Note over Bob: 3. Xác minh: kiểm tra Q thuộc E(F_p) và r, s thuộc [1, n-1]
+    Note over Bob: Tính z = SHA-256(m), w = s^(-1) mod n, u1 = z*w mod n, u2 = r*w mod n
+    Note over Bob: Tính P(x_P, y_P) = u1*G + u2*Q và đối chiếu x_P mod n == r
     Bob-->>Alice: Chữ ký HỢP LỆ (Toàn vẹn & Chống chối bỏ)
 ```
 
@@ -228,7 +230,7 @@ $$D = (p, a, b, G, n, h)$$
 Trong đồ án này, ta sử dụng đường cong chuẩn công nghiệp quốc tế **secp256k1** do tổ chức *Standards for Efficient Cryptography Group* (SECG) ban hành:
 - **Trường nguyên tố $p$**:
   $$p = 2^{256} - 2^{32} - 977 = \text{0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F}$$
-  *(Số nguyên tố Koblitz đặc biệt giúp tối ưu hóa phép chia dư modulo trên kiến trúc 32-bit và 64-bit)*.
+  *(Số nguyên tố dạng giả Mersenne / Crandall–Solinas đặc biệt trên đường cong Koblitz trường nguyên tố `secp256k1`, giúp tối ưu hóa phép rút gọn modulo nhanh không cần phép chia trên kiến trúc 32-bit và 64-bit)*.
 - **Hệ số phương trình Weierstrass**:
   $$a = 0, \quad b = 7 \implies y^2 \equiv x^3 + 7 \pmod p$$
 - **Tọa độ điểm cơ sở $G = (G_x, G_y)$**:
@@ -391,8 +393,8 @@ Nguy hiểm hơn, kẻ tấn công thậm chí **không cần $k$ phải trùng 
 Để loại bỏ vĩnh viễn rủi ro từ bộ sinh số ngẫu nhiên phần cứng hay lỗi phần mềm, tháng 8/2013, Thomas Pornin đã công bố tiêu chuẩn **RFC 6979** (*Deterministic Usage of the Digital Signature Algorithm and Elliptic Curve Digital Signature Algorithm*).
 
 Triết lý của RFC 6979:
-- Giá trị $k$ không được sinh ngẫu nhiên tự do mà được tính toán một cách **tất định** (*deterministic*) thông qua hàm băm dựa trên khóa HMAC-SHA256 kết hợp giữa khóa riêng $d$ và mã băm thông điệp $H(m)$:
-  $$k = \text{HMAC-SHA256}(d, H(m))$$
+- Giá trị $k$ không được sinh ngẫu nhiên tự do mà được dẫn xuất một cách **tất định** (*deterministic*) thông qua bộ sinh bit giả ngẫu nhiên **HMAC_DRBG** (dựa trên HMAC-SHA256) khởi tạo từ khóa riêng $d$ và mã băm thông điệp $H(m)$:
+  $$k = \operatorname{HMAC\_DRBG}_{\text{SHA-256}}\left(d, H(m)\right) \in [1, n - 1]$$
 - **Đặc tính an toàn**:
   - Đối với cùng một thông điệp $m$, chữ ký tạo ra luôn là duy nhất.
   - Đối với hai thông điệp khác nhau $m_1 \neq m_2$, giá trị $k_1$ và $k_2$ hoàn toàn độc lập, ngẫu nhiên giả và phân phối đều trên $[1, n - 1]$.
@@ -521,8 +523,13 @@ $$z = 10$$
 1. Chọn số ngẫu nhiên nonce bí mật:
    $$k = 13 \quad (1 \le k < 19)$$
 2. Tính điểm tạm thời $R = k \cdot G = 13 \cdot (5, 1)$:
-   - Qua các bước tính tương tự Double-and-Add, ta thu được:
-     $$R = (16, 4)$$
+   - Tận dụng điểm $6G = (16, 13)$ đã tính ở Bước 1, ta nhân đôi để được $12G = 2 \cdot (6G)$:
+     $$\lambda_{12G} = \frac{3(16^2) + 2}{2(13)} = \frac{770}{26} \equiv \frac{5}{9} \equiv 5 \times 2 = 10 \pmod{17}$$
+     $$x_{12G} = 10^2 - 2(16) = 68 \equiv 0 \pmod{17}, \quad y_{12G} = 10(16 - 0) - 13 = 147 \equiv 11 \pmod{17} \implies 12G = (0, 11)$$
+   - Cộng thêm $G = (5, 1)$ để thu được $R = 13G = 12G + G = (0, 11) + (5, 1)$:
+     $$\lambda_{13G} = \frac{1 - 11}{5 - 0} = \frac{-10}{5} = -2 \equiv 15 \pmod{17}$$
+     $$x_R = 15^2 - 0 - 5 = 220 \equiv 16 \pmod{17}, \quad y_R = 15(0 - 16) - 11 = -251 \equiv 4 \pmod{17}$$
+     $$\implies R = (16, 4)$$
    *(Kiểm tra: $4^2 = 16$; $16^3 + 2(16) + 2 = 4096 + 32 + 2 = 4130 \equiv 16 \pmod{17} \implies R \in E(\mathbb{F}_{17})$)*.
 3. Tính thành phần $r$:
    $$r = x_R \bmod n = 16 \bmod 19 = 16 \neq 0$$
@@ -557,10 +564,9 @@ Người xác minh nhận được thông điệp có $z = 10$, chữ ký $(r, s
 4. Tính các điểm thành phần:
    - $P_1 = u_1 \cdot G = 2 \cdot (5, 1)$: Đã tính ở trên $\implies P_1 = (6, 3)$.
    - $P_2 = u_2 \cdot Q = 7 \cdot (0, 6)$:
-     Ta đã biết $Q = 7G$, do đó $P_2 = 7 \cdot (7G) = 49G$.
-     Vì bậc của nhóm là 19, ta lấy $49 \bmod 19 = 11$, suy ra $P_2 = 11G$.
-     Tính toán đại số cho ta kết quả tọa độ:
-     $$P_2 = (13, 10)$$
+     Ta đã biết $Q = 7G$, do đó $P_2 = 7 \cdot (7G) = 49G$. Vì bậc nhóm $n = 19$ nên $49 \equiv 11 \pmod{19}$, tức $P_2 = 11G = 12G + (-G) = (0, 11) + (5, 16)$:
+     $$\lambda_{11G} = \frac{16 - 11}{5 - 0} = \frac{5}{5} = 1 \implies x_{P_2} = 1^2 - 0 - 5 = -4 \equiv 13 \pmod{17}, \quad y_{P_2} = 1(0 - 13) - 11 = -24 \equiv 10 \pmod{17}$$
+     $$\implies P_2 = (13, 10)$$
      *(Kiểm tra: $10^2 = 100 \equiv 15 \pmod{17}$; $13^3 + 2(13) + 2 = 2197 + 26 + 2 = 2225 \equiv 15 \pmod{17}$)*.
 5. Tính điểm kiểm chứng $P = P_1 + P_2 = (6, 3) + (13, 10)$:
    Hệ số góc cát tuyến qua $(6, 3)$ và $(13, 10)$:
@@ -573,7 +579,7 @@ Người xác minh nhận được thông điệp có $z = 10$, chữ ký $(r, s
 6. Đối chiếu kết quả xác minh:
    $$x_P \bmod n = 16 \bmod 19 = 16$$
    So sánh với $r = 16$:
-   $$x_P \equiv r \equiv 16 \pmod{19} \implies \mathbf{CHỮ\ KÝ\ HOÀN\ TOÀN\ HỢP\ LỆ!}$$
+   $$x_P \equiv r \equiv 16 \pmod{19} \implies \text{\textbf{CHỮ KÝ HOÀN TOÀN HỢP LỆ!}}$$
 
 Ví dụ tính tay nhỏ này đã kiểm chứng chuẩn xác 100% từng phép cộng, nhân đôi điểm và các công thức đồng dư modulo của giải thuật ECDSA!
 
@@ -581,7 +587,7 @@ Ví dụ tính tay nhỏ này đã kiểm chứng chuẩn xác 100% từng phép
 
 ## Mục 7. Giải thích cấu trúc code `ecdsa.py` đã viết
 
-Mã nguồn [ecdsa.py](file:///d:/HOCTAP/IS(Text)/ecdsa.py) được thiết kế theo cấu trúc module hóa phân tầng, đáp ứng triệt để yêu cầu không sử dụng bất kỳ thư viện mật mã nào bên ngoài, chỉ dựa trên thư viện chuẩn của Python (`secrets`, `time`, `math`, `typing`, `dataclasses`).
+Mã nguồn [ecdsa.py](./ecdsa.py) (815 dòng) được thiết kế theo cấu trúc module hóa phân tầng, đáp ứng triệt để yêu cầu không sử dụng bất kỳ thư viện mật mã nào bên ngoài, chỉ dựa trên thư viện chuẩn của Python (`secrets`, `time`, `math`, `typing`, `dataclasses`).
 
 ```mermaid
 flowchart TD
@@ -616,38 +622,35 @@ flowchart TD
 
 ### 7.1. Chi tiết các module và chức năng của từng hàm/lớp
 
-#### 1. Lớp biểu diễn điểm `Point`
-- Biểu diễn tọa độ affine $(x, y)$ dưới dạng số nguyên lớn (arbitrary-precision integer).
-- Hỗ trợ biểu diễn điểm vô cực $\mathcal{O}$ bằng thuộc tính `is_infinity` (khi $x$ và $y$ đều mang giá trị `None`).
+#### 1. Số học cơ sở và lớp biểu diễn điểm `Point` ([ecdsa.py](./ecdsa.py#L29-L114))
+- Các hàm `extended_gcd` và `mod_inverse` tính ước chung lớn nhất và nghịch đảo nhân modulo an toàn với kiểm tra miền nghiêm ngặt.
+- Lớp bất biến `Point` biểu diễn tọa độ affine $(x, y)$ dạng số nguyên lớn, kiểm tra tính toàn vẹn kiểu trong `__post_init__` (cả hai tọa độ đều là `int` hoặc cùng là `None` cho điểm vô cực $\mathcal{O}$).
 - Triển khai `__repr__` và `to_short_str()` hỗ trợ xuất chuỗi hexa thẩm mỹ cho việc ghi log và in báo cáo.
 
-#### 2. Lớp đường cong Elliptic `EllipticCurve`
-- Khởi tạo với đầy đủ bộ tham số miền $(p, a, b, G, n, h)$. Tự động kiểm tra điều kiện không suy biến $4a^3 + 27b^2 \not\equiv 0 \pmod p$ và xác nhận điểm sinh $G$ thuộc đường cong ngay khi khởi tạo.
-- `point_add(P, Q)`: Xử lý toàn diện mọi trường hợp biên hình học:
-  - Một trong hai điểm là $\mathcal{O}$.
-  - Hai điểm đối xứng qua trục $Ox$ ($P = -Q$) trả về $\mathcal{O}$.
-  - Hai điểm trùng nhau ($P = Q$) chuyển hướng sang công thức tiếp tuyến nhân đôi điểm (Point Doubling).
-  - Hai điểm phân biệt áp dụng công thức cát tuyến (Point Addition).
-- `scalar_mult(k, P)`: Cài đặt thuật toán Double-and-Add tối ưu, dịch phải nhị phân `k >>= 1` và kiểm tra bit `k & 1`.
+#### 2. Lớp đường cong Elliptic `EllipticCurve` ([ecdsa.py](./ecdsa.py#L117-L274))
+- Khởi tạo với đầy đủ bộ tham số miền $(p, a, b, G, n, h)$: tự động xác minh $p > 3$, điều kiện không suy biến $4a^3 + 27b^2 \not\equiv 0 \pmod p$, điểm sinh $G \in E(\mathbb{F}_p)$ và bậc nhóm $n \cdot G = \mathcal{O}$ ngay khi khởi tạo.
+- `is_on_curve(pt)`: Kiểm tra chặt chẽ tọa độ trường chuẩn tắc $0 \le x, y < p$ (chống biến dạng khóa công khai ngoài miền trường theo SEC 1 v2 Mục 3.2.2.1) và phương trình Weierstrass.
+- `point_add(P, Q)`: Xử lý toàn diện mọi trường hợp biên hình học ($\mathcal{O}$, hai điểm đối xứng $P = -Q \to \mathcal{O}$, nhân đôi điểm tiếp tuyến khi $P = Q$, và cộng cát tuyến khi $P \neq Q$).
+- `scalar_mult(k, P)`: Cài đặt thuật toán Double-and-Add nguyên bản trên $E(\mathbb{F}_p)$ không rút gọn tắt `k % n`, đảm bảo tính đúng đắn toán học trên cả các đường cong có hệ số đồng bậc $h > 1$ và bảo toàn hiệu lực của phép kiểm tra thành viên nhóm con $n \cdot Q = \mathcal{O}$.
 
-#### 3. Tích hợp trực tiếp module băm `sha256.py`
-- Tích hợp hàm `bam_sha256_bytes` từ file [sha256.py](file:///d:/HOCTAP/IS(Text)/sha256.py) cùng thư mục.
-- Hàm `hash_message_to_int`: Chuyển đổi chuỗi văn bản UTF-8 hoặc mảng byte thành số nguyên lớn $z$, đồng thời tự động cắt bit (*truncation*) nếu số bit của mã băm vượt quá số bit của bậc nhóm $n$ theo đặc tả của chuẩn SEC 1.
+#### 3. Tích hợp trực tiếp module băm `sha256.py` ([ecdsa.py](./ecdsa.py#L337-L359))
+- Tích hợp hàm `bam_sha256_bytes` từ file [sha256.py](./sha256.py) cùng thư mục.
+- Hàm `hash_message_to_int`: Chuyển đổi chuỗi văn bản UTF-8 hoặc mảng byte thành số nguyên lớn $z$, đồng thời tự động cắt bit (*truncation*) nếu số bit của mã băm vượt quá số bit của bậc nhóm $n$ theo đặc tả của chuẩn SEC 1 / FIPS 186-4.
 
-#### 4. Các hàm vận hành ECDSA
+#### 4. Các hàm vận hành ECDSA ([ecdsa.py](./ecdsa.py#L322-L506))
 - `generate_keypair(curve)`: Sử dụng nguồn ngẫu nhiên CSPRNG `secrets.randbelow(n - 1) + 1` để đảm bảo phân phối đều tuyệt đối trên $[1, n - 1]$, tính $Q = d \cdot G$.
-- `sign_message(message, private_key, curve, k_custom)`: Sinh số ngẫu nhiên nonce $k$, tính $R = k \cdot G$, $r = R_x \bmod n$, nghịch đảo $k^{-1}$, và $s = k^{-1}(z + rd) \bmod n$. Hỗ trợ tham số `k_custom` phục vụ tái lập chính xác các vector kiểm thử và ví dụ tính tay.
-- `verify_signature(message, signature, public_key, curve)`: Kiểm tra toàn diện tính hợp lệ của khóa công khai $Q$ (nằm trên đường cong, khác $\mathcal{O}$, $n \cdot Q = \mathcal{O}$), kiểm tra biên $1 \le r, s < n$, tính $w, u_1, u_2$ và khôi phục điểm $P = u_1 G + u_2 Q$. Trả về `True` khi $x_P \bmod n == r$.
+- `sign_message(message, private_key, curve, k_custom, low_s)`: Sinh số ngẫu nhiên nonce $k \in [1, n - 1]$ (kiểm tra biên chặt chẽ cả khi truyền `k_custom`), tính $R = k \cdot G$, $r = R_x \bmod n$, nghịch đảo $k^{-1}$, $s = k^{-1}(z + rd) \bmod n$, và hỗ trợ tùy chọn chuẩn hóa chữ ký Low-S (`low_s=True` theo BIP-62).
+- `verify_signature(message, signature, public_key, curve)`: Kiểm tra toàn diện khóa công khai $Q$ theo chuẩn SEC 1 v2 ($Q \neq \mathcal{O}$, tọa độ thuộc $[0, p-1]$, $Q \in E(\mathbb{F}_p)$, và $n \cdot Q = \mathcal{O}$ khi $h \neq 1$), kiểm tra biên $1 \le r, s < n$, tính $w, u_1, u_2$ và khôi phục điểm $P = u_1 G + u_2 Q$. Trả về `True` khi và chỉ khi $x_P \equiv r \pmod n$.
 
-#### 5. Module mô phỏng tấn công và khai thác `attack_nonce_reuse`
-- Thực thi chính xác đòn tấn công toán học khôi phục $k$ và $d$ khi phát hiện hai chữ ký có cùng thành phần $r$.
+#### 5. Module mô phỏng tấn công và thực nghiệm ([ecdsa.py](./ecdsa.py#L513-L815))
+- Thực thi đòn tấn công toán học `attack_nonce_reuse` khôi phục $k$ và $d$ khi phát hiện hai chữ ký trùng thành phần $r$, kiểm chứng Toy Curve $\mathbb{F}_{17}$, chạy bộ kiểm thử bảo mật 5 kịch bản và đo hiệu năng thực tế.
 
 ---
 
 ## Mục 8. Bảng đánh giá thực nghiệm, kiểm chứng tính đúng đắn, hiệu năng tính toán và kết luận
 
 ### 8.1. Kiểm chứng tính đúng đắn và an toàn mật mã (Functional & Security Tests)
-Mã nguồn [ecdsa.py](file:///d:/HOCTAP/IS(Text)/ecdsa.py) đã được thực thi và vượt qua 100% các ca kiểm thử:
+Mã nguồn [ecdsa.py](./ecdsa.py) đã được thực thi và vượt qua 100% các ca kiểm thử:
 
 | STT | Kịch bản kiểm thử | Mô tả chi tiết dữ liệu thử nghiệm | Kết quả mong đợi | Kết quả thực tế | Đánh giá |
 | :---: | :--- | :--- | :---: | :---: | :---: |
@@ -656,9 +659,9 @@ Mã nguồn [ecdsa.py](file:///d:/HOCTAP/IS(Text)/ecdsa.py) đã được thực
 | **TC3** | **Giả mạo thông điệp** | Thêm 1 ký tự dấu chấm `.` vào cuối chuỗi | `verify_signature() == False` | `False` | **ĐẠT (PASS)** |
 | **TC4** | **Can thiệp chữ ký $(r, s)$** | Sửa đổi thành phần $r \to r + 1$ | `verify_signature() == False` | `False` | **ĐẠT (PASS)** |
 | **TC5** | **Khóa công khai sai lệch** | Dùng khóa công khai của người dùng khác | `verify_signature() == False` | `False` | **ĐẠT (PASS)** |
-| **TC6** | **Tấn công tái sử dụng nonce** | Ký 2 lệnh chuyển tiền với cùng nonce $k$ | Khôi phục chính xác $100\%$ khóa $d$ | $d_{khôi\ phục} == d_{gốc}$ | **ĐẠT (PASS)** |
+| **TC6** | **Tấn công tái sử dụng nonce** | Ký 2 lệnh chuyển tiền với cùng nonce $k$ | Khôi phục chính xác $100\%$ khóa $d$ | $d_{\text{khôi phục}} = d_{\text{gốc}}$ | **ĐẠT (PASS)** |
 
-```
+```text
 [*] Minh chứng chạy thực nghiệm từ ecdsa.py:
 ================================================================================
 VÍ DỤ TÍNH TAY VỚI THAM SỐ ĐƯỜNG CONG SỐ NHỎ (TOY CURVE TRÊN F_17)
@@ -668,29 +671,29 @@ VÍ DỤ TÍNH TAY VỚI THAM SỐ ĐƯỜNG CONG SỐ NHỎ (TOY CURVE TRÊN F_
 [Bước 1: Sinh khóa] -> d = 7, Q = (0, 6)
 [Bước 2: Tạo chữ ký số] -> z = 10, k = 13, R = (16, 4) => (r=16, s=5)
 [Bước 3: Xác minh chữ ký số] -> w=4, u1=2, u2=7, P=(16, 4) => P.x mod 19 == 16 (KHỚP 100%)
-=> KẾT QUẢ XÁC MINH: HỢP LỆ (TRUE - ĐẠT)
+=> KẾT QUẢ XÁC MINH: HỢP LỆ (TRUE - 100% KHỚP NHAU)
 ```
 
 ---
 
 ### 8.2. Đánh giá hiệu năng tính toán thực tế (Benchmark Results)
-Đo đạc thực nghiệm được thực hiện trên môi trường máy tính sinh viên, ngôn ngữ Python 3.12 thuần 64-bit, thực hiện trung bình qua 30 lần chạy độc lập trên đường cong `secp256k1`:
+Đo đạc thực nghiệm được thực hiện trực tiếp bằng `python -X utf8 ecdsa.py` trên Python 3.12 thuần 64-bit, lấy trung bình qua 30 lần chạy độc lập trên đường cong `secp256k1`:
 
 | Thao tác nghiệp vụ | Thời gian trung bình (ms) | Thời gian nhanh nhất (ms) | Thời gian chậm nhất (ms) | Tốc độ xử lý (ops/giây) |
 | :--- | :---: | :---: | :---: | :---: |
-| **Sinh cặp khóa (KeyGen)** | **24.52 ms** | 22.92 ms | 30.23 ms | **40.8 ops/s** |
-| **Tạo chữ ký số (Sign)** | **25.62 ms** | 23.47 ms | 36.87 ms | **39.0 ops/s** |
-| **Xác minh chữ ký (Verify)** | **50.26 ms** | 47.29 ms | 54.90 ms | **19.9 ops/s** |
+| **Sinh cặp khóa (KeyGen)** | **12.21 ms** | 11.52 ms | 14.13 ms | **81.9 ops/s** |
+| **Tạo chữ ký số (Sign)** | **12.78 ms** | 11.86 ms | 19.58 ms | **78.3 ops/s** |
+| **Xác minh chữ ký (Verify)** | **24.24 ms** | 23.02 ms | 25.90 ms | **41.3 ops/s** |
 
 #### Nhận xét và phân tích chuyên sâu về hiệu năng:
 1. **Tỷ lệ thời gian giữa Xác minh (Verify) và Ký (Sign)**:
-   - Dữ liệu thực nghiệm cho thấy thời gian hàm `Verify` ($\approx 50.26 \text{ ms}$) gấp xấp xỉ **2 lần** thời gian của hàm `Sign` ($\approx 25.62 \text{ ms}$).
+   - Dữ liệu thực nghiệm cho thấy thời gian hàm `Verify` ($\approx 24.24 \text{ ms}$) gấp xấp xỉ **2 lần** thời gian của hàm `Sign` ($\approx 12.78 \text{ ms}$).
    - **Lý giải nguyên lý tính toán**:
      - Trong quá trình Ký (`Sign`), chương trình chỉ thực hiện **duy nhất 1 phép nhân vô hướng** $R = k \cdot G$.
      - Trong quá trình Xác minh (`Verify`), chương trình bắt buộc phải thực hiện **2 phép nhân vô hướng độc lập** $u_1 \cdot G$ và $u_2 \cdot Q$, sau đó thực hiện thêm một phép cộng điểm $P = (u_1 \cdot G) + (u_2 \cdot Q)$. Do phép nhân vô hướng chiếm tới hơn 95% tổng thời gian tính toán của đường cong Elliptic, thời gian xác minh tự nhiên gấp đôi thời gian ký.
-     *(Trong các thư viện tối ưu hóa chuyên sâu như `libsecp256k1` bằng ngôn ngữ C, kỹ thuật nhân vô hướng đôi Strauss-Shamir Trick có thể rút ngắn thời gian xác minh xuống chỉ còn gấp khoảng 1.3 lần)*.
+     *(Trong các thư viện tối ưu hóa chuyên sâu như `libsecp256k1` bằng ngôn ngữ C, kỹ thuật nhân vô hướng đôi Strauss–Shamir Trick kết hợp nội đồng cấu GLV có thể rút ngắn thời gian xác minh xuống chỉ còn gấp khoảng 1.3 lần)*.
 2. **Hiệu năng Python thuần**:
-   - Dù không sử dụng bất kỳ thư viện C tăng tốc hay thư viện mật mã có sẵn nào, chương trình Python thuần vẫn đạt tốc độ xấp xỉ **40 chữ ký/giây**, hoàn toàn đáp ứng tốt cho các ứng dụng xác thực, ví tiền mã hóa cá nhân và các hệ thống phân tán quy mô vừa.
+   - Dù không sử dụng bất kỳ thư viện C tăng tốc hay thư viện mật mã có sẵn nào, chương trình Python thuần vẫn đạt tốc độ gần **80 chữ ký/giây**, hoàn toàn đáp ứng tốt cho các ứng dụng xác thực, ví tiền mã hóa cá nhân và các hệ thống phân tán quy mô vừa.
 
 ---
 

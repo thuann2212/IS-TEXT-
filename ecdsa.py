@@ -82,6 +82,13 @@ class Point:
     x: Optional[int] = None
     y: Optional[int] = None
 
+    def __post_init__(self) -> None:
+        if (self.x is None) != (self.y is None):
+            raise ValueError("Điểm trên đường cong Elliptic phải có cả hai tọa độ (x, y) hoặc cùng là None (Infinity).")
+        if self.x is not None:
+            if isinstance(self.x, bool) or isinstance(self.y, bool) or not isinstance(self.x, int) or not isinstance(self.y, int):
+                raise TypeError("Tọa độ điểm (x, y) phải là số nguyên (int).")
+
     @property
     def is_infinity(self) -> bool:
         """Kiểm tra xem điểm có phải là điểm vô cực O hay không."""
@@ -124,6 +131,10 @@ class EllipticCurve:
     """
 
     def __init__(self, name: str, p: int, a: int, b: int, G_x: int, G_y: int, n: int, h: int = 1):
+        if p <= 3:
+            raise ValueError(f"Đặc số trường nguyên tố p của phương trình Weierstrass rút gọn phải lớn hơn 3 (p={p}).")
+        if n <= 1 or h < 1:
+            raise ValueError("Bậc nhóm con n phải > 1 và hệ số đồng bậc h phải >= 1.")
         self.name = name
         self.p = p
         self.a = a % p
@@ -138,17 +149,23 @@ class EllipticCurve:
 
         self.G = Point(G_x % self.p, G_y % self.p)
 
-        # Kiểm tra điểm cơ sở G phải thuộc đường cong
+        # Kiểm tra điểm cơ sở G phải thuộc đường cong và có đúng cấp chia hết n (n * G = O)
         if not self.is_on_curve(self.G):
             raise ValueError(f"Điểm cơ sở G({G_x}, {G_y}) không thuộc đường cong {self.name}!")
+        if not self.scalar_mult(self.n, self.G).is_infinity:
+            raise ValueError(f"Bậc n={self.n} không hợp lệ: n * G != Point(Infinity) trên đường cong {self.name}!")
 
     def is_on_curve(self, pt: Point) -> bool:
         """
-        Kiểm tra điểm pt có thỏa mãn phương trình đường cong y^2 = x^3 + a*x + b (mod p) hay không.
-        Điểm vô cực O luôn được coi là thuộc đường cong.
+        Kiểm tra điểm pt có thuộc E(F_p) chuẩn tắc hay không (theo SEC 1 v2 Mục 3.2.2.1):
+        - Điểm vô cực O luôn thuộc đường cong.
+        - Điểm affine (x, y) bắt buộc phải có tọa độ nằm trong trường [0, p - 1]
+          và thỏa mãn y^2 = x^3 + a*x + b (mod p).
         """
         if pt.is_infinity:
             return True
+        if not (0 <= pt.x < self.p and 0 <= pt.y < self.p):
+            return False
         lhs = (pt.y ** 2) % self.p
         rhs = (pt.x ** 3 + self.a * pt.x + self.b) % self.p
         return lhs == rhs
@@ -181,6 +198,9 @@ class EllipticCurve:
            x_R = lambda^2 - x_P - x_Q mod p
            y_R = lambda * (x_P - x_R) - y_P mod p
         """
+        if not self.is_on_curve(P) or not self.is_on_curve(Q):
+            raise ValueError("Điểm đầu vào của phép cộng không thuộc đường cong Elliptic!")
+
         # Trường hợp 1: Có điểm vô cực
         if P.is_infinity:
             return Q
@@ -229,17 +249,18 @@ class EllipticCurve:
         - Nếu bit bằng 1: R = R + Current_P
         - Trong mỗi vòng: Current_P = 2 * Current_P
         """
+        if not self.is_on_curve(P):
+            raise ValueError("Điểm đầu vào của phép nhân vô hướng không thuộc đường cong Elliptic!")
         if k == 0 or P.is_infinity:
             return INFINITY_POINT
 
-        # Chuẩn hóa k nếu k âm hoặc k lớn hơn bậc nhóm n
+        # Chuẩn hóa dấu nếu k âm: (-k) * P = k * (-P)
+        # Lưu ý bảo mật: KHÔNG rút gọn k %= self.n tại đây vì trên đường cong có cofactor h > 1,
+        # một điểm bất kỳ P trên E(F_p) có thể không nằm trong nhóm con cấp n, và phép kiểm tra
+        # thành viên nhóm con (n * Q == O) trong verify_signature cần nhân thực sự với n!
         if k < 0:
             k = -k
             P = self.point_neg(P)
-
-        k = k % self.n if self.n else k
-        if k == 0:
-            return INFINITY_POINT
 
         result = INFINITY_POINT
         current = P
@@ -342,11 +363,12 @@ def sign_message(
     message: Union[str, bytes],
     private_key: int,
     curve: EllipticCurve = SECP256K1,
-    k_custom: Optional[int] = None
+    k_custom: Optional[int] = None,
+    low_s: bool = False
 ) -> Tuple[int, int]:
     """
     Quy trình Ký số ECDSA (Signature Generation):
-    Đầu vào: Thông điệp m, khóa riêng d, tham số đường cong.
+    Đầu vào: Thông điệp m, khóa riêng d, tham số đường cong, tùy chọn chuẩn hóa BIP-62 (low_s).
     Đầu ra: Cặp chữ ký (r, s).
     
     Các bước thực hiện chi tiết:
@@ -358,17 +380,20 @@ def sign_message(
        c. Tính r = x_1 mod n. Nếu r == 0, quay lại bước a chọn k khác.
        d. Tính nghịch đảo k^(-1) mod n.
        e. Tính s = k^(-1) * (z + r * d) mod n. Nếu s == 0, quay lại bước a chọn k khác.
+       f. (Tùy chọn BIP-62) Nếu low_s=True và s > (n - 1) // 2, chuẩn hóa s = n - s.
     3. Trả về cặp chữ ký số (r, s).
     """
     d = private_key
-    if not (1 <= d < curve.n):
+    if isinstance(d, bool) or not isinstance(d, int) or not (1 <= d < curve.n):
         raise ValueError(f"Khóa riêng d không hợp lệ! Bắt buộc phải nằm trong [1, {curve.n - 1}].")
 
     z = hash_message_to_int(message, curve)
 
     while True:
-        # Nếu truyền k_custom (dùng cho ví dụ tính tay hoặc kiểm thử), sử dụng k đó
+        # Nếu truyền k_custom (dùng cho ví dụ tính tay hoặc kiểm thử), kiểm tra miền [1, n - 1]
         if k_custom is not None:
+            if isinstance(k_custom, bool) or not isinstance(k_custom, int) or not (1 <= k_custom < curve.n):
+                raise ValueError(f"Nonce k_custom không hợp lệ! Bắt buộc phải nằm trong [1, {curve.n - 1}].")
             k = k_custom
         else:
             k = secrets.randbelow(curve.n - 1) + 1
@@ -397,7 +422,10 @@ def sign_message(
                 raise ValueError("s = 0, cần chọn k khác!")
             continue
 
-        # Nếu truyền k_custom thì chỉ chạy 1 lần rồi thoát
+        # f. Chuẩn hóa chữ ký Low-S (BIP-62) chống uốn dẻo chữ ký nếu được bật
+        if low_s and s > (curve.n - 1) // 2:
+            s = curve.n - s
+
         return r, s
 
 
@@ -428,15 +456,24 @@ def verify_signature(
     7. Nếu P là điểm vô cực -> Chữ ký KHÔNG HỢP LỆ.
     8. Chữ ký hợp lệ khi và chỉ khi: r == x_P mod n.
     """
+    if not isinstance(signature, (tuple, list)) or len(signature) != 2:
+        return False
     r, s = signature
+    if isinstance(r, bool) or isinstance(s, bool) or not isinstance(r, int) or not isinstance(s, int):
+        return False
+    if not isinstance(public_key, Point):
+        return False
     Q = public_key
 
-    # 1. Kiểm tra khóa công khai Q
+    # 1. Kiểm tra khóa công khai Q theo chuẩn SEC 1 v2 Mục 3.2.2.1:
+    #    - Q != O, tọa độ chuẩn tắc [0, p-1] và thỏa phương trình đường cong.
+    #    - Kiểm tra thành viên nhóm con cấp n (n * Q = O): bắt buộc khi cofactor h > 1;
+    #      khi h = 1 (#E(F_p) = n), định lý Lagrange đảm bảo mọi điểm thuộc E(F_p) đều thỏa n * Q = O.
     if Q.is_infinity:
         return False
     if not curve.is_on_curve(Q):
         return False
-    if not curve.scalar_mult(curve.n, Q).is_infinity:
+    if curve.h != 1 and not curve.scalar_mult(curve.n, Q).is_infinity:
         return False
 
     # 2. Kiểm tra biên chữ ký r, s
@@ -499,10 +536,12 @@ def attack_nonce_reuse(
     r1, s1 = sig1
     r2, s2 = sig2
 
+    if not (1 <= r1 < curve.n and 1 <= r2 < curve.n and 1 <= s1 < curve.n and 1 <= s2 < curve.n):
+        raise ValueError("Các thành phần chữ ký (r, s) nằm ngoài miền hợp lệ [1, n - 1]!")
     if r1 != r2:
         raise ValueError("Hai chữ ký không có cùng giá trị r (chưa tái sử dụng k)!")
-    if s1 == s2:
-        raise ValueError("s1 == s2: Hai thông điệp có thể trùng nhau hoặc chữ ký giống nhau hoàn toàn!")
+    if (s1 - s2) % curve.n == 0:
+        raise ValueError("s1 == s2 (mod n): Hai thông điệp trùng mã băm hoặc chữ ký giống nhau hoàn toàn!")
 
     z1 = hash_message_to_int(m1, curve)
     z2 = hash_message_to_int(m2, curve)
