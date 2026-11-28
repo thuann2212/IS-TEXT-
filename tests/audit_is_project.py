@@ -315,11 +315,11 @@ def main():
     for ten_bc in ["bao_cao_sha256.md", "bao_cao_aes128.md", "bao_cao_rsa.md", "bao_cao_ecdsa.md"]:
         with open(os.path.join(DOCS_DIR, ten_bc), "r", encoding="utf-8") as f:
             nd = f.read()
-        du_8_muc = all(f"## Mục {i}." in nd for i in range(1, 9))
+        du_8_muc = all(f"## Section {i}." in nd for i in range(1, 9))
         ghi_nhan(
             f"Kiểm tra cấu trúc đủ 8 mục trong docs/{ten_bc}",
             du_8_muc,
-            "Đầy đủ từ Mục 1 đến Mục 8",
+            "Đầy đủ từ Section 1 đến Section 8",
         )
 
     print("\n" + "=" * 90)
