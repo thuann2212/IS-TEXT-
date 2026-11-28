@@ -53,9 +53,3 @@ python -X utf8 aes128.py
 python -X utf8 rsa.py
 python -X utf8 ecdsa.py
 ```
-
-Chạy bộ kịch bản kiểm định tự động toàn diện cả 4 thuật toán và 4 báo cáo:
-
-```powershell
-python -X utf8 .agents/skills/is-crypto-auditor/scripts/audit_is_project.py
-```
