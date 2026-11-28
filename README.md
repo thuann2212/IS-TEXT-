@@ -53,3 +53,9 @@ python -X utf8 aes128.py
 python -X utf8 rsa.py
 python -X utf8 ecdsa.py
 ```
+
+Chạy kiểm thử tổng hợp toàn bộ 4 thuật toán, quét AST và đối chiếu 4 báo cáo (30 hạng mục):
+
+```powershell
+python -X utf8 audit_is_project.py
+```
