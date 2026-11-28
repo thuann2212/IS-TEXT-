@@ -19,7 +19,10 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
 # Tích hợp trực tiếp module băm SHA-256 tự viết từ nguyên lý gốc (sha256.py)
-from sha256 import bam_sha256_bytes
+try:
+    from sha256 import bam_sha256_bytes
+except ImportError:
+    from algorithms.sha256 import bam_sha256_bytes
 
 
 # ==============================================================================

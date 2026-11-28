@@ -8,7 +8,10 @@ Kết nối trực tiếp với mô-đun sha256.py để trích xuất khóa 128
 """
 
 import time
-from sha256 import bam_sha256_bytes
+try:
+    from sha256 import bam_sha256_bytes
+except ImportError:
+    from algorithms.sha256 import bam_sha256_bytes
 
 # Đa thức tối giản (Irreducible Polynomial) của AES trên trường GF(2^8):
 # m(x) = x^8 + x^4 + x^3 + x + 1 -> Biểu diễn nhị phân: 0b100011011 = 0x11B

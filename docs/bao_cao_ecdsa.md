@@ -587,7 +587,7 @@ This small worked example confirms with 100% precision every point addition, poi
 
 ## Section 7. Architectural Explanation of the Implemented `ecdsa.py` Codebase
 
-The source file [ecdsa.py](../algorithms/ecdsa.py) (815 lines) is structured around a layered modular architecture, strictly satisfying the requirement to use zero external cryptographic libraries and relying solely on the Python standard library (`secrets`, `time`, `math`, `typing`, `dataclasses`).
+The source file [ecdsa.py](../algorithms/ecdsa.py) (818 lines) is structured around a layered modular architecture, strictly satisfying the requirement to use zero external cryptographic libraries and relying solely on the Python standard library (`secrets`, `time`, `math`, `typing`, `dataclasses`).
 
 ```mermaid
 flowchart TD
@@ -622,27 +622,27 @@ flowchart TD
 
 ### 7.1. Module Breakdown and Function/Class Responsibilities
 
-#### 1. Core Modular Arithmetic and `Point` Representation ([ecdsa.py](../algorithms/ecdsa.py#L29-L114))
+#### 1. Core Modular Arithmetic and `Point` Representation ([ecdsa.py](../algorithms/ecdsa.py#L32-L117))
 - `extended_gcd` and `mod_inverse` compute the greatest common divisor and modular multiplicative inverse safely with strict domain validation.
 - The immutable `Point` class represents arbitrary-precision affine coordinates $(x, y)$, enforcing type and structural invariants inside `__post_init__` (both coordinates must be `int`, or both `None` for the point at infinity $\mathcal{O}$).
 - Implements `__repr__` and `to_short_str()` to provide readable hexadecimal formatting for execution logs and reports.
 
-#### 2. The `EllipticCurve` Class ([ecdsa.py](../algorithms/ecdsa.py#L117-L274))
+#### 2. The `EllipticCurve` Class ([ecdsa.py](../algorithms/ecdsa.py#L120-L277))
 - Initializes with full domain parameters $(p, a, b, G, n, h)$: automatically verifies $p > 3$, the non-singularity condition $4a^3 + 27b^2 \not\equiv 0 \pmod p$, base point membership $G \in E(\mathbb{F}_p)$, and subgroup order $n \cdot G = \mathcal{O}$ upon instantiation.
 - `is_on_curve(pt)`: Enforces canonical field bounds $0 \le x, y < p$ (preventing out-of-range public key spoofing per SEC 1 v2 Section 3.2.2.1) alongside the Weierstrass congruence.
 - `point_add(P, Q)`: Handles every geometric case ($\mathcal{O}$, vertical inverses $P = -Q \to \mathcal{O}$, tangent point doubling when $P = Q$, and secant point addition when $P \neq Q$).
 - `scalar_mult(k, P)`: Implements Double-and-Add scalar multiplication directly over $E(\mathbb{F}_p)$ without shortcut reduction via `k % n`, preserving mathematical correctness even on curves with cofactor $h > 1$ and ensuring the subgroup membership check $n \cdot Q = \mathcal{O}$ remains effective against **cofactor subgroup attacks**.
 
-#### 3. Direct Integration with `sha256.py` ([ecdsa.py](../algorithms/ecdsa.py#L337-L359))
-- Imports and invokes `bam_sha256_bytes` directly from [sha256.py](../algorithms/sha256.py) in the `algorithms/` directory.
+#### 3. Direct Integration with `sha256.py` ([ecdsa.py](../algorithms/ecdsa.py#L340-L362))
+- Imports and invokes `bam_sha256_bytes` directly from [sha256.py](../algorithms/sha256.py) in the `algorithms/` directory (supporting both direct execution and `algorithms.sha256` package imports).
 - `hash_message_to_int`: Converts UTF-8 text strings or raw byte arrays into an integer digest $z$, automatically performing bit truncation if the hash length exceeds the bit length of the subgroup order $n$ in accordance with SEC 1 / FIPS 186-4.
 
-#### 4. Core ECDSA Operations ([ecdsa.py](../algorithms/ecdsa.py#L322-L506))
+#### 4. Core ECDSA Operations ([ecdsa.py](../algorithms/ecdsa.py#L325-L509))
 - `generate_keypair(curve)`: Uses the CSPRNG `secrets.randbelow(n - 1) + 1` to guarantee uniform sampling over $[1, n - 1]$ and computes $Q = d \cdot G$.
 - `sign_message(message, private_key, curve, k_custom, low_s)`: Generates ephemeral nonce $k \in [1, n - 1]$ (with strict bounds validation even when `k_custom` is supplied), computes $R = k \cdot G$, $r = R_x \bmod n$, $k^{-1}$, and $s = k^{-1}(z + rd) \bmod n$, while optionally supporting BIP-62 Low-S canonicalization (`low_s=True`).
 - `verify_signature(message, signature, public_key, curve)`: Performs full SEC 1 v2 public-key validation ($Q \neq \mathcal{O}$, coordinates in $[0, p-1]$, $Q \in E(\mathbb{F}_p)$, and $n \cdot Q = \mathcal{O}$ when $h \neq 1$ to defend against cofactor subgroup attacks), enforces $1 \le r, s < n$, computes $w, u_1, u_2$, and reconstructs $P = u_1 G + u_2 Q$. Returns `True` if and only if $x_P \equiv r \pmod n$.
 
-#### 5. Attack Simulation and Experimental Evaluation Module ([ecdsa.py](../algorithms/ecdsa.py#L513-L815))
+#### 5. Attack Simulation and Experimental Evaluation Module ([ecdsa.py](../algorithms/ecdsa.py#L516-L818))
 - Implements the algebraic `attack_nonce_reuse` exploit to recover $k$ and $d$ whenever two signatures share the same $r$, verifies the Toy Curve $\mathbb{F}_{17}$ worked example, executes a comprehensive security test suite, and benchmarks real-world runtime performance.
 
 ---

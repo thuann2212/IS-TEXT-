@@ -267,7 +267,7 @@ $$S^{(1)} = \begin{bmatrix} \texttt{b3} & \texttt{ce} & \texttt{6a} & \texttt{65
 
 ## Section 7. Code Structure Explanation of `aes128.py`
 
-The source file [aes128.py](../algorithms/aes128.py) (680 lines) is built entirely in pure Python *From First Principles*, without using any external encryption libraries, and directly connects with the [sha256.py](../algorithms/sha256.py) module:
+The source file [aes128.py](../algorithms/aes128.py) (683 lines) is built entirely in pure Python *From First Principles*, without using any external encryption libraries, and directly connects with the [sha256.py](../algorithms/sha256.py) module:
 
 ```mermaid
 flowchart TD
@@ -289,21 +289,21 @@ flowchart TD
     BLK --> MODE
 ```
 
-1. **Finite Field $GF(2^8)$ Arithmetic and *First Principles* S-Box Verification Module ([aes128.py](../algorithms/aes128.py#L22-L143))**:
+1. **Finite Field $GF(2^8)$ Arithmetic and *First Principles* S-Box Verification Module ([aes128.py](../algorithms/aes128.py#L25-L146))**:
    - The `xtime(a)` function performs multiplication by the polynomial $x$ ($\{\texttt{02}\}$) and reduction modulo `0x11B` (`^ 0x1B` when bit 7 equals 1).
    - The `nhan_gf256(a, b)` function implements arbitrary polynomial multiplication in $GF(2^8)$ using an 8-step loop.
    - The `nghich_dao_gf256(a)` function computes the multiplicative inverse $a^{254} \in GF(2^8)$, combined with `bien_doi_affine_sbox(b)` and `kiem_chung_sbox_tu_nguyen_ly_goc()` to empirically prove that all 256 entries of `S_BOX` and `INV_S_BOX` match the algebraic definition over $GF(2^8)$ exactly.
-2. **4×4 State Matrix Conversion Module ([aes128.py](../algorithms/aes128.py#L154-L165))**:
+2. **4×4 State Matrix Conversion Module ([aes128.py](../algorithms/aes128.py#L157-L168))**:
    - The two functions `bytes_sang_state(khoi_16_byte)` and `state_sang_bytes(state)` strictly validate exact dimensions of 16 bytes / a $4 \times 4$ matrix (preventing implicit data truncation) and map bidirectionally in strict accordance with the column-major convention (`r + 4 * c`) of FIPS 197.
-3. **Forward and Inverse 4-Transformation Round Module ([aes128.py](../algorithms/aes128.py#L172-L271))**:
+3. **Forward and Inverse 4-Transformation Round Module ([aes128.py](../algorithms/aes128.py#L175-L274))**:
    - Explicitly and separately implements each step: `sub_bytes` / `inv_sub_bytes`, `shift_rows` / `inv_shift_rows`, `mix_columns` / `inv_mix_columns` (directly invoking `nhan_gf256`), and `add_round_key`.
-4. **10-Round *KeyExpansion* Module `mo_rong_khoa_aes128` ([aes128.py](../algorithms/aes128.py#L278-L319))**:
+4. **10-Round *KeyExpansion* Module `mo_rong_khoa_aes128` ([aes128.py](../algorithms/aes128.py#L281-L322))**:
    - Implements the helper functions `rot_word` and `sub_word` along with the `RCON` constants to expand the 16-byte key into 44 32-bit words, then packages them into a list of 11 $4 \times 4$ round key matrices.
-5. **Single-Block Encryption/Decryption and CBC/ECB Modes with *PKCS#7 padding* ([aes128.py](../algorithms/aes128.py#L326-L494))**:
+5. **Single-Block Encryption/Decryption and CBC/ECB Modes with *PKCS#7 padding* ([aes128.py](../algorithms/aes128.py#L329-L497))**:
    - `ma_hoa_khoi_16byte` and `giai_ma_khoi_16byte` verify that all 11 round keys are provided and execute exactly 10 transformation rounds.
    - `dem_pkcs7` and `bo_dem_pkcs7` validate block size bounds within $[1, 255]$ and scan the entire final block without early branching, using a uniform error message to mitigate timing side-channel leaks (*Padding Oracle*).
    - `ma_hoa_aes128_cbc`, `giai_ma_aes128_cbc`, `ma_hoa_aes128_ecb`, and `giai_ma_aes128_ecb` encrypt and decrypt UTF-8 Vietnamese text of arbitrary length.
-6. **`sha256.py` Integration, Manual Calculation Trace, and Benchmark Module ([aes128.py](../algorithms/aes128.py#L501-L680))**:
+6. **`sha256.py` Integration, Manual Calculation Trace, and Benchmark Module ([aes128.py](../algorithms/aes128.py#L504-L683))**:
    - `lay_khoa_va_iv_sinh_vien("Trần Gia Thuận")` directly invokes `bam_sha256_bytes` from [sha256.py](../algorithms/sha256.py) to slice the first 16 bytes as the AES-128 key and the remaining 16 bytes as the $IV$.
    - `minh_hoa_tinh_tay_vong0_vong1` and `chay_benchmark` automatically print test results and execution timing tables for payload sizes of 100B, 1KB, and 10KB.
 
