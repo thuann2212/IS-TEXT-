@@ -3,7 +3,7 @@
 - **Họ và tên sinh viên**: Trần Gia Thuận
 - **Chữ số cuối SID**: 3 ($3 \bmod 4 = 3 \rightarrow$ Phân công đề tài: **Chữ ký số: ECDSA – Elliptic Curve Digital Signature Algorithm**)
 - **Ngôn ngữ & Môi trường thực thi**: Python thuần 3.12 (cài đặt từ nguyên lý gốc — *From First Principles*, không sử dụng thư viện mật mã có sẵn)
-- **Mã nguồn thực nghiệm**: [ecdsa.py](./ecdsa.py) (kết nối trực tiếp cùng [sha256.py](./sha256.py), đối chiếu cùng [rsa.py](./rsa.py) và [aes128.py](./aes128.py))
+- **Mã nguồn thực nghiệm**: [ecdsa.py](../algorithms/ecdsa.py) (kết nối trực tiếp cùng [sha256.py](../algorithms/sha256.py), đối chiếu cùng [rsa.py](../algorithms/rsa.py) và [aes128.py](../algorithms/aes128.py))
 
 ---
 
@@ -587,7 +587,7 @@ Ví dụ tính tay nhỏ này đã kiểm chứng chuẩn xác 100% từng phép
 
 ## Mục 7. Giải thích cấu trúc code `ecdsa.py` đã viết
 
-Mã nguồn [ecdsa.py](./ecdsa.py) (815 dòng) được thiết kế theo cấu trúc module hóa phân tầng, đáp ứng triệt để yêu cầu không sử dụng bất kỳ thư viện mật mã nào bên ngoài, chỉ dựa trên thư viện chuẩn của Python (`secrets`, `time`, `math`, `typing`, `dataclasses`).
+Mã nguồn [ecdsa.py](../algorithms/ecdsa.py) (815 dòng) được thiết kế theo cấu trúc module hóa phân tầng, đáp ứng triệt để yêu cầu không sử dụng bất kỳ thư viện mật mã nào bên ngoài, chỉ dựa trên thư viện chuẩn của Python (`secrets`, `time`, `math`, `typing`, `dataclasses`).
 
 ```mermaid
 flowchart TD
@@ -622,27 +622,27 @@ flowchart TD
 
 ### 7.1. Chi tiết các module và chức năng của từng hàm/lớp
 
-#### 1. Số học cơ sở và lớp biểu diễn điểm `Point` ([ecdsa.py](./ecdsa.py#L29-L114))
+#### 1. Số học cơ sở và lớp biểu diễn điểm `Point` ([ecdsa.py](../algorithms/ecdsa.py#L29-L114))
 - Các hàm `extended_gcd` và `mod_inverse` tính ước chung lớn nhất và nghịch đảo nhân modulo an toàn với kiểm tra miền nghiêm ngặt.
 - Lớp bất biến `Point` biểu diễn tọa độ affine $(x, y)$ dạng số nguyên lớn, kiểm tra tính toàn vẹn kiểu trong `__post_init__` (cả hai tọa độ đều là `int` hoặc cùng là `None` cho điểm vô cực $\mathcal{O}$).
 - Triển khai `__repr__` và `to_short_str()` hỗ trợ xuất chuỗi hexa thẩm mỹ cho việc ghi log và in báo cáo.
 
-#### 2. Lớp đường cong Elliptic `EllipticCurve` ([ecdsa.py](./ecdsa.py#L117-L274))
+#### 2. Lớp đường cong Elliptic `EllipticCurve` ([ecdsa.py](../algorithms/ecdsa.py#L117-L274))
 - Khởi tạo với đầy đủ bộ tham số miền $(p, a, b, G, n, h)$: tự động xác minh $p > 3$, điều kiện không suy biến $4a^3 + 27b^2 \not\equiv 0 \pmod p$, điểm sinh $G \in E(\mathbb{F}_p)$ và bậc nhóm $n \cdot G = \mathcal{O}$ ngay khi khởi tạo.
 - `is_on_curve(pt)`: Kiểm tra chặt chẽ tọa độ trường chuẩn tắc $0 \le x, y < p$ (chống biến dạng khóa công khai ngoài miền trường theo SEC 1 v2 Mục 3.2.2.1) và phương trình Weierstrass.
 - `point_add(P, Q)`: Xử lý toàn diện mọi trường hợp biên hình học ($\mathcal{O}$, hai điểm đối xứng $P = -Q \to \mathcal{O}$, nhân đôi điểm tiếp tuyến khi $P = Q$, và cộng cát tuyến khi $P \neq Q$).
 - `scalar_mult(k, P)`: Cài đặt thuật toán Double-and-Add nguyên bản trên $E(\mathbb{F}_p)$ không rút gọn tắt `k % n`, đảm bảo tính đúng đắn toán học trên cả các đường cong có hệ số đồng bậc $h > 1$ và bảo toàn hiệu lực của phép kiểm tra thành viên nhóm con $n \cdot Q = \mathcal{O}$.
 
-#### 3. Tích hợp trực tiếp module băm `sha256.py` ([ecdsa.py](./ecdsa.py#L337-L359))
-- Tích hợp hàm `bam_sha256_bytes` từ file [sha256.py](./sha256.py) cùng thư mục.
+#### 3. Tích hợp trực tiếp module băm `sha256.py` ([ecdsa.py](../algorithms/ecdsa.py#L337-L359))
+- Tích hợp hàm `bam_sha256_bytes` từ file [sha256.py](../algorithms/sha256.py) trong thư mục lgorithms/.
 - Hàm `hash_message_to_int`: Chuyển đổi chuỗi văn bản UTF-8 hoặc mảng byte thành số nguyên lớn $z$, đồng thời tự động cắt bit (*truncation*) nếu số bit của mã băm vượt quá số bit của bậc nhóm $n$ theo đặc tả của chuẩn SEC 1 / FIPS 186-4.
 
-#### 4. Các hàm vận hành ECDSA ([ecdsa.py](./ecdsa.py#L322-L506))
+#### 4. Các hàm vận hành ECDSA ([ecdsa.py](../algorithms/ecdsa.py#L322-L506))
 - `generate_keypair(curve)`: Sử dụng nguồn ngẫu nhiên CSPRNG `secrets.randbelow(n - 1) + 1` để đảm bảo phân phối đều tuyệt đối trên $[1, n - 1]$, tính $Q = d \cdot G$.
 - `sign_message(message, private_key, curve, k_custom, low_s)`: Sinh số ngẫu nhiên nonce $k \in [1, n - 1]$ (kiểm tra biên chặt chẽ cả khi truyền `k_custom`), tính $R = k \cdot G$, $r = R_x \bmod n$, nghịch đảo $k^{-1}$, $s = k^{-1}(z + rd) \bmod n$, và hỗ trợ tùy chọn chuẩn hóa chữ ký Low-S (`low_s=True` theo BIP-62).
 - `verify_signature(message, signature, public_key, curve)`: Kiểm tra toàn diện khóa công khai $Q$ theo chuẩn SEC 1 v2 ($Q \neq \mathcal{O}$, tọa độ thuộc $[0, p-1]$, $Q \in E(\mathbb{F}_p)$, và $n \cdot Q = \mathcal{O}$ khi $h \neq 1$), kiểm tra biên $1 \le r, s < n$, tính $w, u_1, u_2$ và khôi phục điểm $P = u_1 G + u_2 Q$. Trả về `True` khi và chỉ khi $x_P \equiv r \pmod n$.
 
-#### 5. Module mô phỏng tấn công và thực nghiệm ([ecdsa.py](./ecdsa.py#L513-L815))
+#### 5. Module mô phỏng tấn công và thực nghiệm ([ecdsa.py](../algorithms/ecdsa.py#L513-L815))
 - Thực thi đòn tấn công toán học `attack_nonce_reuse` khôi phục $k$ và $d$ khi phát hiện hai chữ ký trùng thành phần $r$, kiểm chứng Toy Curve $\mathbb{F}_{17}$, chạy bộ kiểm thử bảo mật 5 kịch bản và đo hiệu năng thực tế.
 
 ---
@@ -650,7 +650,7 @@ flowchart TD
 ## Mục 8. Bảng đánh giá thực nghiệm, kiểm chứng tính đúng đắn, hiệu năng tính toán và kết luận
 
 ### 8.1. Kiểm chứng tính đúng đắn và an toàn mật mã (Functional & Security Tests)
-Mã nguồn [ecdsa.py](./ecdsa.py) đã được thực thi và vượt qua 100% các ca kiểm thử:
+Mã nguồn [ecdsa.py](../algorithms/ecdsa.py) đã được thực thi và vượt qua 100% các ca kiểm thử:
 
 | STT | Kịch bản kiểm thử | Mô tả chi tiết dữ liệu thử nghiệm | Kết quả mong đợi | Kết quả thực tế | Đánh giá |
 | :---: | :--- | :--- | :---: | :---: | :---: |
@@ -677,7 +677,7 @@ VÍ DỤ TÍNH TAY VỚI THAM SỐ ĐƯỜNG CONG SỐ NHỎ (TOY CURVE TRÊN F_
 ---
 
 ### 8.2. Đánh giá hiệu năng tính toán thực tế (Benchmark Results)
-Đo đạc thực nghiệm được thực hiện trực tiếp bằng `python -X utf8 ecdsa.py` trên Python 3.12 thuần 64-bit, lấy trung bình qua 30 lần chạy độc lập trên đường cong `secp256k1`:
+Đo đạc thực nghiệm được thực hiện trực tiếp bằng `python -X utf8 algorithms/ecdsa.py` trên Python 3.12 thuần 64-bit, lấy trung bình qua 30 lần chạy độc lập trên đường cong `secp256k1`:
 
 | Thao tác nghiệp vụ | Thời gian trung bình (ms) | Thời gian nhanh nhất (ms) | Thời gian chậm nhất (ms) | Tốc độ xử lý (ops/giây) |
 | :--- | :---: | :---: | :---: | :---: |

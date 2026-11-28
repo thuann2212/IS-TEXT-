@@ -3,7 +3,7 @@
 - **Họ và tên sinh viên**: Trần Gia Thuận
 - **Chữ số cuối SID**: 3
 - **Ngôn ngữ & Môi trường thực thi**: Python thuần 3.12 (cài đặt từ nguyên lý gốc — *From First Principles*, không sử dụng thư viện mật mã có sẵn)
-- **Mã nguồn thực nghiệm**: [aes128.py](./aes128.py) (kết nối trực tiếp với [sha256.py](./sha256.py) để trích xuất khóa 128-bit từ họ tên sinh viên)
+- **Mã nguồn thực nghiệm**: [aes128.py](../algorithms/aes128.py) (kết nối trực tiếp với [sha256.py](../algorithms/sha256.py) để trích xuất khóa 128-bit từ họ tên sinh viên)
 
 ---
 
@@ -148,7 +148,7 @@ AES-128 được thiết kế để đóng vai trò một **Hoán vị giả ng�
    - Là kỹ thuật phân tích lý thuyết tốt nhất hiện nay trên 10 vòng của AES-128, giảm độ phức tạp từ $2^{128}$ xuống $2^{126.1}$ phép toán nhưng đòi hỏi $2^{88}$ bản rõ chọn trước — hoàn toàn bất khả thi về mặt vật lý.
 3. **Tấn công kênh kề định thời và Padding Oracle**:
    - Các cài đặt dùng bảng tra RAM (`S_BOX` / *T-tables*) có thể rò rỉ khóa qua thời gian truy xuất bộ nhớ đệm CPU (*Cache-Timing Attack* – Bernstein, 2005); chế độ CBC không kèm xác thực MAC có thể bị khai thác qua **Padding Oracle Attack** (Vaudenay, 2002) nếu máy chủ phản hồi chi tiết lỗi đệm.
-   - *Phòng vệ*: Dùng tập lệnh phần cứng thời gian hằng số **AES-NI** hoặc kỹ thuật **Bitslicing**, kiểm tra đệm không rẽ nhánh sớm với thông báo lỗi đồng nhất (đã áp dụng trong `bo_dem_pkcs7` của [aes128.py](./aes128.py)), và trong thực tế sản xuất ưu tiên chế độ mã hóa xác thực **AES-GCM** hoặc **Encrypt-then-MAC (AES-CBC + HMAC-SHA256)**.
+   - *Phòng vệ*: Dùng tập lệnh phần cứng thời gian hằng số **AES-NI** hoặc kỹ thuật **Bitslicing**, kiểm tra đệm không rẽ nhánh sớm với thông báo lỗi đồng nhất (đã áp dụng trong `bo_dem_pkcs7` của [aes128.py](../algorithms/aes128.py)), và trong thực tế sản xuất ưu tiên chế độ mã hóa xác thực **AES-GCM** hoặc **Encrypt-then-MAC (AES-CBC + HMAC-SHA256)**.
 
 ---
 
@@ -186,7 +186,7 @@ AES-128 được thiết kế để đóng vai trò một **Hoán vị giả ng�
 - **Đệm dữ liệu tự động theo chuẩn PKCS#7 (`dem_pkcs7`)**:
   Vì kích thước khối của AES là 16 byte, chuỗi 14 byte còn thiếu $16 - 14 = 2$ byte. Chuẩn PKCS#7 tự động nối thêm 2 byte có giá trị `0x02` vào cuối để tạo thành khối đầu vào 16 byte $P$:
   $$\text{Hex}(P) = \texttt{54\;72\;61\;6e\;20\;47\;69\;61\;20\;54\;68\;75\;61\;6e\;}\underline{\mathbf{02\;02}}$$
-- **Khóa bí mật $K = RoundKey_0$ (16 byte đầu của $\operatorname{SHA-256}(\text{"Trần Gia Thuận"})$ từ [sha256.py](./sha256.py))**:
+- **Khóa bí mật $K = RoundKey_0$ (16 byte đầu của $\operatorname{SHA-256}(\text{"Trần Gia Thuận"})$ từ [sha256.py](../algorithms/sha256.py))**:
   $$\text{Hex}(K) = \texttt{70\;c3\;1d\;dd\;b8\;7c\;f9\;c3\;fd\;10\;3a\;56\;69\;34\;68\;39}$$
 
 ### 6.1. Xếp vào ma trận trạng thái $4 \times 4$ (theo từng cột) và thực hiện Vòng 0 (`AddRoundKey`)
@@ -261,13 +261,13 @@ $$S_{\text{mix}}^{(1)} = \begin{bmatrix} \texttt{b3} & \texttt{ce} & \texttt{6a}
 
 $$S^{(1)} = \begin{bmatrix} \texttt{b3} & \texttt{ce} & \texttt{6a} & \texttt{65} \\ \texttt{0b} & \texttt{1b} & \texttt{ac} & \texttt{3d} \\ \texttt{e9} & \texttt{ee} & \texttt{11} & \texttt{52} \\ \texttt{67} & \texttt{09} & \texttt{82} & \texttt{b4} \end{bmatrix} \oplus \begin{bmatrix} \texttt{69} & \texttt{d1} & \texttt{2c} & \texttt{45} \\ \texttt{86} & \texttt{fa} & \texttt{ea} & \texttt{de} \\ \texttt{0f} & \texttt{f6} & \texttt{cc} & \texttt{a4} \\ \texttt{24} & \texttt{e7} & \texttt{b1} & \texttt{88} \end{bmatrix} = \begin{bmatrix} \texttt{da} & \texttt{1f} & \texttt{46} & \texttt{20} \\ \texttt{8d} & \texttt{e1} & \texttt{46} & \texttt{e3} \\ \texttt{e6} & \texttt{18} & \texttt{dd} & \texttt{f6} \\ \texttt{43} & \texttt{ee} & \texttt{33} & \texttt{3c} \end{bmatrix}$$
 
-*(Chuỗi 16 byte kết thúc Vòng 1: `da 8d e6 43 1f e1 18 ee 46 46 dd 33 20 e3 f6 3c`, bản mã sau 10 vòng là `485472a086cb866f58d5b8c321a9d5df`, và khi giải mã + gỡ đệm PKCS#7 trả về chính xác `'Tran Gia Thuan'` – khớp 100% với kết quả truy vết của chương trình [aes128.py](./aes128.py))*.
+*(Chuỗi 16 byte kết thúc Vòng 1: `da 8d e6 43 1f e1 18 ee 46 46 dd 33 20 e3 f6 3c`, bản mã sau 10 vòng là `485472a086cb866f58d5b8c321a9d5df`, và khi giải mã + gỡ đệm PKCS#7 trả về chính xác `'Tran Gia Thuan'` – khớp 100% với kết quả truy vết của chương trình [aes128.py](../algorithms/aes128.py))*.
 
 ---
 
 ## Mục 7. Giải thích cấu trúc code `aes128.py` đã viết
 
-Tệp mã nguồn [aes128.py](./aes128.py) (680 dòng) được xây dựng hoàn toàn bằng Python thuần từ nguyên lý gốc, không dùng bất kỳ thư viện mã hóa nào và kết nối trực tiếp với mô-đun [sha256.py](./sha256.py):
+Tệp mã nguồn [aes128.py](../algorithms/aes128.py) (680 dòng) được xây dựng hoàn toàn bằng Python thuần từ nguyên lý gốc, không dùng bất kỳ thư viện mã hóa nào và kết nối trực tiếp với mô-đun [sha256.py](../algorithms/sha256.py):
 
 ```mermaid
 flowchart TD
@@ -289,22 +289,22 @@ flowchart TD
     BLK --> MODE
 ```
 
-1. **Khối số học trường hữu hạn $GF(2^8)$ và kiểm chứng S-Box từ nguyên lý gốc ([aes128.py](./aes128.py#L22-L143))**:
+1. **Khối số học trường hữu hạn $GF(2^8)$ và kiểm chứng S-Box từ nguyên lý gốc ([aes128.py](../algorithms/aes128.py#L22-L143))**:
    - Hàm `xtime(a)` thực hiện phép nhân với đa thức $x$ ($\{\texttt{02}\}$) và rút gọn modulo `0x11B` (`^ 0x1B` khi bit 7 bằng 1).
    - Hàm `nhan_gf256(a, b)` cài đặt phép nhân đa thức bất kỳ trong $GF(2^8)$ bằng vòng lặp 8 bước.
    - Hàm `nghich_dao_gf256(a)` tính phần tử nghịch đảo $a^{254} \in GF(2^8)$ kết hợp hàm `bien_doi_affine_sbox(b)` và `kiem_chung_sbox_tu_nguyen_ly_goc()` để chứng minh thực nghiệm toàn bộ 256 phần tử `S_BOX` và `INV_S_BOX` khớp tuyệt đối với định nghĩa đại số trên $GF(2^8)$.
-2. **Khối chuyển đổi ma trận trạng thái $4 \times 4$ ([aes128.py](./aes128.py#L154-L165))**:
+2. **Khối chuyển đổi ma trận trạng thái $4 \times 4$ ([aes128.py](../algorithms/aes128.py#L154-L165))**:
    - Hai hàm `bytes_sang_state(khoi_16_byte)` và `state_sang_bytes(state)` kiểm tra nghiêm ngặt kích thước đúng 16 byte / ma trận $4 \times 4$ (ngăn chặn cắt cụt dữ liệu ngầm) và ánh xạ 2 chiều theo đúng chuẩn thứ tự cột (`r + 4 * c`) của FIPS 197.
-3. **Khối 4 phép biến đổi vòng thuận và nghịch ([aes128.py](./aes128.py#L172-L271))**:
+3. **Khối 4 phép biến đổi vòng thuận và nghịch ([aes128.py](../algorithms/aes128.py#L172-L271))**:
    - Cài đặt tách biệt, tường minh từng bước: `sub_bytes` / `inv_sub_bytes`, `shift_rows` / `inv_shift_rows`, `mix_columns` / `inv_mix_columns` (gọi trực tiếp hàm `nhan_gf256`), và `add_round_key`.
-4. **Khối mở rộng khóa 10 vòng `mo_rong_khoa_aes128` ([aes128.py](./aes128.py#L278-L319))**:
+4. **Khối mở rộng khóa 10 vòng `mo_rong_khoa_aes128` ([aes128.py](../algorithms/aes128.py#L278-L319))**:
    - Cài đặt các hàm phụ trợ `rot_word`, `sub_word` và hằng số `RCON` để mở rộng khóa 16 byte thành 44 từ 32-bit, sau đó đóng gói thành danh sách 11 ma trận khóa vòng $4 \times 4$.
-5. **Khối mã hóa/giải mã khối đơn và chế độ CBC/ECB kèm đệm PKCS#7 ([aes128.py](./aes128.py#L326-L494))**:
+5. **Khối mã hóa/giải mã khối đơn và chế độ CBC/ECB kèm đệm PKCS#7 ([aes128.py](../algorithms/aes128.py#L326-L494))**:
    - Hàm `ma_hoa_khoi_16byte` và `giai_ma_khoi_16byte` kiểm tra đủ 11 khóa vòng và thực thi đúng 10 vòng biến đổi.
    - Hàm `dem_pkcs7` và `bo_dem_pkcs7` kiểm tra miền kích thước khối $[1, 255]$ và quét toàn bộ khối cuối không rẽ nhánh sớm với thông báo lỗi đồng nhất nhằm giảm thiểu rò rỉ kênh kề thời gian (*Padding Oracle*).
    - Các hàm `ma_hoa_aes128_cbc`, `giai_ma_aes128_cbc`, `ma_hoa_aes128_ecb`, `giai_ma_aes128_ecb` mã hóa và giải mã văn bản tiếng Việt UTF-8 dài tùy ý.
-6. **Khối kết nối `sha256.py`, truy vết tính tay và Benchmark ([aes128.py](./aes128.py#L501-L680))**:
-   - Hàm `lay_khoa_va_iv_sinh_vien("Trần Gia Thuận")` gọi trực tiếp `bam_sha256_bytes` từ file [sha256.py](./sha256.py) để cắt 16 byte đầu làm khóa AES-128 và 16 byte sau làm $IV$.
+6. **Khối kết nối `sha256.py`, truy vết tính tay và Benchmark ([aes128.py](../algorithms/aes128.py#L501-L680))**:
+   - Hàm `lay_khoa_va_iv_sinh_vien("Trần Gia Thuận")` gọi trực tiếp `bam_sha256_bytes` từ file [sha256.py](../algorithms/sha256.py) để cắt 16 byte đầu làm khóa AES-128 và 16 byte sau làm $IV$.
    - Hàm `minh_hoa_tinh_tay_vong0_vong1` và `chay_benchmark` tự động in kết quả kiểm thử và bảng đo thời gian thực thi cho các mức 100B, 1KB, 10KB.
 
 ---
@@ -313,7 +313,7 @@ flowchart TD
 
 ### 8.1. Kiểm chứng tính đúng đắn (Vector chuẩn NIST FIPS 197 & Văn bản tiếng Việt của sinh viên)
 
-Chương trình [aes128.py](./aes128.py) đã được thực thi và vượt qua toàn bộ các bài kiểm tra tiêu chuẩn cũng như dữ liệu thực tế của sinh viên **Trần Gia Thuận** (chữ số cuối SID: **3**):
+Chương trình [aes128.py](../algorithms/aes128.py) đã được thực thi và vượt qua toàn bộ các bài kiểm tra tiêu chuẩn cũng như dữ liệu thực tế của sinh viên **Trần Gia Thuận** (chữ số cuối SID: **3**):
 
 | Hạng mục kiểm thử | Đầu vào / Tham số | Kết quả đầu ra thực tế từ `aes128.py` | Đối chiếu giải mã / Chuẩn kỳ vọng | Đánh giá |
 | :--- | :--- | :--- | :--- | :---: |
@@ -324,7 +324,7 @@ Chương trình [aes128.py](./aes128.py) đã được thực thi và vượt qu
 | **5. Văn bản tiếng Việt dài (CBC & ECB + PKCS#7)** | Chuỗi tiếng Việt UTF-8 dài **247 bytes** (sau đệm PKCS#7 là **256 bytes** = 16 khối, đệm 9 byte `0x09`) | Bản mã CBC (256B): `ac74bee5bad46b4c...`<br>Bản mã ECB (256B): `39b51c27cea4ae89...` | Giải mã CBC và gỡ đệm PKCS#7 khôi phục nguyên vẹn 247 byte chuỗi tiếng Việt gốc | **KHỚP 100%** |
 
 ### 8.2. Bảng đánh giá hiệu năng tính toán (Benchmark AES-128-CBC)
-Kết quả đo thực nghiệm trực tiếp khi chạy `python -X utf8 aes128.py` trên Python 3.12 thuần (lấy trung bình qua 20 lần lặp cho mỗi kích thước dữ liệu ở chế độ AES-128-CBC kèm đệm PKCS#7):
+Kết quả đo thực nghiệm trực tiếp khi chạy `python -X utf8 algorithms/aes128.py` trên Python 3.12 thuần (lấy trung bình qua 20 lần lặp cho mỗi kích thước dữ liệu ở chế độ AES-128-CBC kèm đệm PKCS#7):
 
 | Kích thước dữ liệu | Số byte gốc | Số khối 128-bit sau đệm PKCS#7 | Thời gian Mã hóa TB (ms) | Thời gian Giải mã TB (ms) | Thông lượng Mã hóa (KB/s) |
 | :--- | :---: | :---: | :---: | :---: | :---: |
@@ -337,4 +337,4 @@ Kết quả đo thực nghiệm trực tiếp khi chạy `python -X utf8 aes128.
 2. **Sự chênh lệch tốc độ giữa Mã hóa và Giải mã**: Thời gian giải mã bằng Python thuần ($\sim 0.50\text{ ms/khối}$) lớn hơn gần gấp đôi so với thời gian mã hóa ($\sim 0.26\text{ ms/khối}$). Nguyên nhân xuất phát trực tiếp từ cấu trúc đại số của phép `InvMixColumns`: trong khi `MixColumns` chỉ nhân với các đa thức hệ số nhỏ `{02, 03, 01, 01}`, thì `InvMixColumns` phải nhân cả 4 phần tử trên mỗi dòng với `{0e, 0b, 0d, 09}` (nhiều bit 1 hơn trong biểu diễn nhị phân), khiến số phép nhân trên trường $GF(2^8)$ tăng gấp đôi.
 
 ### 8.3. Kết luận
-Đồ án đã hoàn thành trọn vẹn việc nghiên cứu lý thuyết và tự cài đặt thuật toán mật mã khóa đối xứng **AES-128** bằng ngôn ngữ Python thuần từ nguyên lý gốc trên trường hữu hạn $GF(2^8)$, tích hợp liền mạch với hàm băm **SHA-256** tự viết tại [sha256.py](./sha256.py) để dẫn xuất khóa bí mật 128-bit (`70c31dddb87cf9c3fd103a5669346839`) từ chuỗi họ tên sinh viên `"Trần Gia Thuận"`. Toàn bộ quy trình từ mở rộng khóa 10 vòng, 4 phép biến đổi vòng, kiểm tra đệm PKCS#7 an toàn đến chế độ mã hóa khối CBC/ECB đều được kiểm chứng khắt khe qua vector chuẩn NIST FIPS 197, ví dụ tính tay từng bước Vòng 0 – Vòng 1 và thử nghiệm thực tế trên văn bản tiếng Việt UTF-8 dài với độ chính xác 100%.
+Đồ án đã hoàn thành trọn vẹn việc nghiên cứu lý thuyết và tự cài đặt thuật toán mật mã khóa đối xứng **AES-128** bằng ngôn ngữ Python thuần từ nguyên lý gốc trên trường hữu hạn $GF(2^8)$, tích hợp liền mạch với hàm băm **SHA-256** tự viết tại [sha256.py](../algorithms/sha256.py) để dẫn xuất khóa bí mật 128-bit (`70c31dddb87cf9c3fd103a5669346839`) từ chuỗi họ tên sinh viên `"Trần Gia Thuận"`. Toàn bộ quy trình từ mở rộng khóa 10 vòng, 4 phép biến đổi vòng, kiểm tra đệm PKCS#7 an toàn đến chế độ mã hóa khối CBC/ECB đều được kiểm chứng khắt khe qua vector chuẩn NIST FIPS 197, ví dụ tính tay từng bước Vòng 0 – Vòng 1 và thử nghiệm thực tế trên văn bản tiếng Việt UTF-8 dài với độ chính xác 100%.

@@ -3,7 +3,7 @@
 - **Họ và tên sinh viên**: Trần Gia Thuận
 - **Chữ số cuối SID**: 3 ($3 \bmod 3 = 0 \rightarrow$ Phân công đề tài: **Mật mã bất đối xứng RSA**)
 - **Ngôn ngữ & Môi trường thực thi**: Python thuần 3.12 (cài đặt từ nguyên lý gốc — *From First Principles*, không sử dụng thư viện mật mã có sẵn)
-- **Mã nguồn thực nghiệm**: [rsa.py](./rsa.py) (đối chiếu trong hệ sinh thái đồ án cùng [sha256.py](./sha256.py), [aes128.py](./aes128.py) và [ecdsa.py](./ecdsa.py))
+- **Mã nguồn thực nghiệm**: [rsa.py](../algorithms/rsa.py) (đối chiếu trong hệ sinh thái đồ án cùng [sha256.py](../algorithms/sha256.py), [aes128.py](../algorithms/aes128.py) và [ecdsa.py](../algorithms/ecdsa.py))
 
 ---
 
@@ -446,7 +446,7 @@ Kết quả giải mã ra đúng số nguyên $m = 65$ (tương ứng ký tự *
 
 ## Mục 7. Giải thích cấu trúc code `rsa.py` đã viết
 
-Mã nguồn thực nghiệm [rsa.py](./rsa.py) (620 dòng) được thiết kế theo kiến trúc 5 tầng phân lớp độc lập, hoàn toàn sử dụng Python 3.12 thuần từ nguyên lý gốc, tuân thủ nguyên tắc không sử dụng bất kỳ thư viện mật mã có sẵn nào:
+Mã nguồn thực nghiệm [rsa.py](../algorithms/rsa.py) (620 dòng) được thiết kế theo kiến trúc 5 tầng phân lớp độc lập, hoàn toàn sử dụng Python 3.12 thuần từ nguyên lý gốc, tuân thủ nguyên tắc không sử dụng bất kỳ thư viện mật mã có sẵn nào:
 
 ```mermaid
 graph TD
@@ -492,7 +492,7 @@ graph TD
     I --> L4
 ```
 
-### 7.1. Phân tích chi tiết các hàm toán học nền tảng ([rsa.py](./rsa.py#L23-L181))
+### 7.1. Phân tích chi tiết các hàm toán học nền tảng ([rsa.py](../algorithms/rsa.py#L23-L181))
 1. **`pow_mod(base, exp, mod)`**:
    - Hiện thực thuật toán Square-and-Multiply (Binary Exponentiation).
    - Kiểm tra chặt chẽ các trường hợp biên ($\text{mod} \le 0 \rightarrow$ lỗi, $\text{mod} = 1 \rightarrow 0$, $\text{exp} < 0 \rightarrow$ lỗi).
@@ -513,7 +513,7 @@ graph TD
    - Bật bit MSB (`1 << (bits - 1)`) để đảm bảo đủ chiều dài bit, và bật bit LSB (`| 1`) để luôn là số lẻ.
    - Lặp kiểm định cho đến khi tìm thấy số vượt qua Miller-Rabin 40 vòng.
 
-### 7.2. Phân tích hàm sinh khóa và lõi mã hóa ([rsa.py](./rsa.py#L188-L313))
+### 7.2. Phân tích hàm sinh khóa và lõi mã hóa ([rsa.py](../algorithms/rsa.py#L188-L313))
 1. **`generate_keypair(key_size=1024, e=65537)`**:
    - Kiểm tra điều kiện tiên quyết của tham số đầu vào ($e \ge 3$ lẻ, $\text{key\_size} \ge 16$, $1 < e < \phi(n)$) nhằm loại bỏ hoàn toàn nguy cơ vòng lặp vô tận khi $e$ chẵn hoặc quá lớn so với kích thước khóa.
    - Sinh $p$ và $q$ sao cho $n = p \cdot q$ đạt đúng `key_size` bit và kiểm tra khoảng cách $|p - q|$ nhằm phòng vệ thuật toán phân tích Fermat.
@@ -523,7 +523,7 @@ graph TD
    - Đảm bảo miền giá trị hợp lệ $0 \le m, c < n$.
    - Nếu `use_crt=True`: áp dụng công thức Garner tính $m_1, m_2, h$ và khôi phục $m$ với tốc độ cao.
 
-### 7.3. Phân tích cơ chế đệm và xử lý văn bản tiếng Việt ([rsa.py](./rsa.py#L320-L620))
+### 7.3. Phân tích cơ chế đệm và xử lý văn bản tiếng Việt ([rsa.py](../algorithms/rsa.py#L320-L620))
 1. **`pkcs1_pad(data, target_len)`** & **`pkcs1_unpad(padded, target_len)`**:
    - Triển khai cấu trúc chuẩn RFC 8017: `0x00 || 0x02 || PS || 0x00 || Data` với $\text{PS}$ gồm tối thiểu 8 byte ngẫu nhiên khác `0x00` sinh bởi `secrets.randbelow(256)`.
    - Hàm `pkcs1_unpad` quét toàn bộ khối không rẽ nhánh thoát sớm và chỉ ném một thông báo lỗi đồng nhất nhằm phòng vệ tấn công **Bleichenbacher Padding Oracle**.
@@ -537,7 +537,7 @@ graph TD
 ## Mục 8. Bảng đánh giá thực nghiệm, kiểm chứng tính đúng đắn, hiệu năng tính toán và kết luận
 
 ### 8.1. Bảng số liệu thực nghiệm đo đạc thực tế
-Thực nghiệm được thực hiện trực tiếp bằng lệnh `python -X utf8 rsa.py` trên môi trường Python 3.12 thuần 64-bit. Dữ liệu kiểm thử là chuỗi văn bản tiếng Việt Unicode có dấu gồm **171 ký tự** (**218 bytes** UTF-8):
+Thực nghiệm được thực hiện trực tiếp bằng lệnh `python -X utf8 algorithms/rsa.py` trên môi trường Python 3.12 thuần 64-bit. Dữ liệu kiểm thử là chuỗi văn bản tiếng Việt Unicode có dấu gồm **171 ký tự** (**218 bytes** UTF-8):
 > *"Khoa Công nghệ Thông tin - Đồ án An toàn thông tin RSA. Sinh viên: Trần Gia Thuận. Mã hóa chuỗi ký tự tiếng Việt: Bảo mật thông tin là nền tảng của chuyển đổi số quốc gia!"*
 
 Bảng kết quả đo lường hiệu năng thực tế (thời gian tính bằng mili-giây – ms):

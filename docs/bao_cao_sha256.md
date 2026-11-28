@@ -3,7 +3,7 @@
 - **Họ và tên sinh viên**: Trần Gia Thuận
 - **Chữ số cuối SID**: 3
 - **Ngôn ngữ & Môi trường thực thi**: Python thuần 3.12 (cài đặt từ nguyên lý gốc — *From First Principles*, không sử dụng thư viện mật mã có sẵn)
-- **Mã nguồn thực nghiệm**: [sha256.py](./sha256.py) (cung cấp khóa dẫn xuất 128-bit cho [aes128.py](./aes128.py) và hàm băm thông điệp cho [ecdsa.py](./ecdsa.py))
+- **Mã nguồn thực nghiệm**: [sha256.py](../algorithms/sha256.py) (cung cấp khóa dẫn xuất 128-bit cho [aes128.py](../algorithms/aes128.py) và hàm băm thông điệp cho [ecdsa.py](../algorithms/ecdsa.py))
 
 ---
 
@@ -155,10 +155,10 @@ Ngoài ra, tính minh bạch trong thiết kế của SHA-256 dựa trên việc
 
 ### 5.3. Ứng dụng thực tế
 - **Giao thức bảo mật mạng**: Nền tảng cho TLS 1.2 / TLS 1.3, IPsec, SSH và chứng thư số X.509.
-- **Chữ ký số và hạ tầng khóa công khai (PKI)**: Băm văn bản trước khi ký bằng RSA-PSS, RSASSA-PKCS1-v1_5 hoặc ECDSA (như trong [ecdsa.py](./ecdsa.py)).
+- **Chữ ký số và hạ tầng khóa công khai (PKI)**: Băm văn bản trước khi ký bằng RSA-PSS, RSASSA-PKCS1-v1_5 hoặc ECDSA (như trong [ecdsa.py](../algorithms/ecdsa.py)).
 - **Công nghệ Blockchain**: Thuật toán bằng chứng công việc (*Proof-of-Work*) cốt lõi của Bitcoin ($\operatorname{SHA-256}(\operatorname{SHA-256}(\text{Header}))$) và cây Merkle xác thực giao dịch.
 - **Kiểm tra toàn vẹn phần mềm & lưu trữ định danh nội dung**: Xác thực gói cài đặt hệ điều hành, Docker/OCI image digest và đối tượng Git SHA-256.
-- **Dẫn xuất khóa mật mã (KDF)**: Hạt nhân của chuẩn HKDF (RFC 5869) và cơ chế sinh khóa cho AES (như trong [aes128.py](./aes128.py)).
+- **Dẫn xuất khóa mật mã (KDF)**: Hạt nhân của chuẩn HKDF (RFC 5869) và cơ chế sinh khóa cho AES (như trong [aes128.py](../algorithms/aes128.py)).
 
 ---
 
@@ -240,13 +240,13 @@ Tại $t = 1$, ta có $W_1 = \text{0x00000000}$ và hằng số $K_1 = \text{0x7
    - Các thanh ghi còn lại:
      $$b = \text{0x5d6aebcd}, \quad c = \text{0x6a09e667}, \quad d = \text{0xbb67ae85}, \quad f = \text{0xfa2a4622}, \quad g = \text{0x510e527f}, \quad h = \text{0x9b05688c}$$
 
-*(Toàn bộ các hằng số xoay bit và giá trị thanh ghi trung gian tại $t=0$ và $t=1$ trên đây trùng khớp 100% với kết quả in đối chiếu từ chương trình [sha256.py](./sha256.py))*.
+*(Toàn bộ các hằng số xoay bit và giá trị thanh ghi trung gian tại $t=0$ và $t=1$ trên đây trùng khớp 100% với kết quả in đối chiếu từ chương trình [sha256.py](../algorithms/sha256.py))*.
 
 ---
 
 ## Mục 7. Giải thích cấu trúc code `sha256.py` đã viết
 
-Tệp mã nguồn [sha256.py](./sha256.py) (379 dòng) được thiết kế theo hướng lập trình hàm phân lớp rõ ràng, không phụ thuộc bất kỳ thư viện mật mã nào (chỉ sử dụng `struct` để đóng/mở gói byte Big-Endian và `time` để đo hiệu năng):
+Tệp mã nguồn [sha256.py](../algorithms/sha256.py) (379 dòng) được thiết kế theo hướng lập trình hàm phân lớp rõ ràng, không phụ thuộc bất kỳ thư viện mật mã nào (chỉ sử dụng `struct` để đóng/mở gói byte Big-Endian và `time` để đo hiệu năng):
 
 ```mermaid
 flowchart TD
@@ -267,19 +267,19 @@ flowchart TD
     COMP --> API
 ```
 
-1. **Khối sinh hằng số từ nguyên lý gốc ([sha256.py](./sha256.py#L17-L61))**:
+1. **Khối sinh hằng số từ nguyên lý gốc ([sha256.py](../algorithms/sha256.py#L17-L61))**:
    - Hàm `lay_n_so_nguyen_to_dau_tien(64)` tìm 64 số nguyên tố đầu tiên ($2 \dots 311$).
    - Hàm `trich_phan_thap_phan_32bit(so_nguyen_to, bac_can)` dùng thuật toán tìm kiếm nhị phân trên số nguyên lớn của Python để tính chính xác $\lfloor \operatorname{frac}(\sqrt[r]{p}) \times 2^{32} \rfloor$ mà không bị sai số dấu phẩy động, tự động tạo ra danh sách `GIA_TRI_KHOI_TAO_H0` và `HANG_SO_VONG_K`.
-2. **Khối các phép toán bit 32-bit cơ sở ([sha256.py](./sha256.py#L68-L137))**:
+2. **Khối các phép toán bit 32-bit cơ sở ([sha256.py](../algorithms/sha256.py#L68-L137))**:
    - Vì kiểu `int` trong Python có độ dài bit tùy ý (*arbitrary-precision*), mọi đầu vào và phép dịch trái, đảo bit (`~x`), cộng số học đều được chuẩn hóa nghiêm ngặt bằng mặt nạ `MASK_32 = 0xFFFFFFFF` (kể cả trước khi dịch phải trong `rotr` và `shr` cùng kiểm tra miền số bit dịch $n \in [0, 31]$).
    - Gồm đầy đủ 8 hàm toán học: `rotr`, `shr`, `ham_ch`, `ham_maj`, `sigma_hoa_0` ($\Sigma_0$), `sigma_hoa_1` ($\Sigma_1$), `sigma_thuong_0` ($\sigma_0$), và `sigma_thuong_1` ($\sigma_1$).
-3. **Khối tiền xử lý đệm bit và chia khối ([sha256.py](./sha256.py#L144-L178))**:
+3. **Khối tiền xử lý đệm bit và chia khối ([sha256.py](../algorithms/sha256.py#L144-L178))**:
    - Hàm `dem_thong_diep(du_lieu_bytes)` kiểm tra kiểu dữ liệu nhị phân hợp lệ và điều kiện biên $l < 2^{64}$ bit, nối byte `0x80`, lặp nối `0x00` đến khi `len % 64 == 56`, rồi dùng `struct.pack(">Q", do_dai_bit)` đóng gói độ dài bit thành 8 byte Big-Endian.
    - Hàm `chia_khoi_512bit(du_lieu_da_dem)` kiểm tra tính bội số 64 byte và cắt thành từng khối 512-bit.
-4. **Khối nén 64 vòng và tổng hợp mã băm ([sha256.py](./sha256.py#L185-L262))**:
+4. **Khối nén 64 vòng và tổng hợp mã băm ([sha256.py](../algorithms/sha256.py#L185-L262))**:
    - Hàm `nen_mot_khoi(khoi_64_byte, trang_thai_h)` kiểm tra kích thước khối 64 byte và 8 thanh ghi trạng thái, giải nén 16 từ 32-bit đầu bằng `struct.unpack(">16I", khoi_64_byte)`, mở rộng lên 64 từ $W_0 \dots W_{63}$, chạy 64 vòng nén cập nhật $(a, b, c, d, e, f, g, h)$ và cộng dồn Davies-Meyer với `trang_thai_h`.
    - Hai hàm giao diện chính là `bam_sha256_bytes(du_lieu)` (trả về 32 byte thô phục vụ `aes128.py` và `ecdsa.py`) và `bam_sha256_hex(du_lieu)` (trả về chuỗi 64 ký tự Hex).
-5. **Khối kiểm thử vector chuẩn, trích khóa AES-128 và đo hiệu năng ([sha256.py](./sha256.py#L269-L379))**:
+5. **Khối kiểm thử vector chuẩn, trích khóa AES-128 và đo hiệu năng ([sha256.py](../algorithms/sha256.py#L269-L379))**:
    - Hàm `chay_benchmark()` đo thời gian thực thi trung bình qua 50 lần lặp bằng `time.perf_counter()` trên các kích thước 100B, 1KB và 10KB.
    - Hàm `main()` tự động đối chiếu 3 vector chuẩn NIST FIPS 180-4 (rỗng, 1 khối và đa khối biên 448-bit), băm chuỗi `"Trần Gia Thuận"` (UTF-8), trích 128 bit đầu làm khóa AES-128 và in truy vết vòng $t=0, 1$.
 
@@ -288,7 +288,7 @@ flowchart TD
 ## Mục 8. Bảng đánh giá thực nghiệm, kiểm chứng tính đúng đắn, hiệu năng tính toán và kết luận
 
 ### 8.1. Kiểm chứng tính đúng đắn và trích xuất khóa AES-128 cho sinh viên
-Chương trình [sha256.py](./sha256.py) đã được chạy thực nghiệm và đối chiếu với bộ vector kiểm thử chuẩn NIST FIPS 180-4 cùng dữ liệu cá nhân của sinh viên **Trần Gia Thuận** (chữ số cuối SID: **3**):
+Chương trình [sha256.py](../algorithms/sha256.py) đã được chạy thực nghiệm và đối chiếu với bộ vector kiểm thử chuẩn NIST FIPS 180-4 cùng dữ liệu cá nhân của sinh viên **Trần Gia Thuận** (chữ số cuối SID: **3**):
 
 | Trường hợp kiểm thử | Đầu vào (UTF-8 / Bytes) | Số byte | Kết quả băm SHA-256 (256-bit Hex) | Trạng thái |
 | :--- | :--- | :---: | :--- | :---: |
@@ -305,7 +305,7 @@ Chương trình [sha256.py](./sha256.py) đã được chạy thực nghiệm v�
   - Dạng mảng 16 byte Hex: `70 c3 1d dd b8 7c f9 c3 fd 10 3a 56 69 34 68 39`
 
 ### 8.2. Bảng đánh giá hiệu năng tính toán (Benchmark)
-Kết quả đo thực nghiệm trực tiếp khi chạy `python -X utf8 sha256.py` trên Python 3.12 thuần (lấy trung bình qua 50 lần chạy cho mỗi kích thước dữ liệu; số liệu thời gian tuyệt đối có thể dao động nhẹ theo xung nhịp CPU nhưng tỷ lệ tuyến tính theo số khối là bất biến):
+Kết quả đo thực nghiệm trực tiếp khi chạy `python -X utf8 algorithms/sha256.py` trên Python 3.12 thuần (lấy trung bình qua 50 lần chạy cho mỗi kích thước dữ liệu; số liệu thời gian tuyệt đối có thể dao động nhẹ theo xung nhịp CPU nhưng tỷ lệ tuyến tính theo số khối là bất biến):
 
 | Kích thước dữ liệu | Số byte đầu vào | Số khối 512-bit sau đệm ($N$) | Tổng số vòng nén ($64 \times N$) | Thời gian chạy trung bình (ms) | Thông lượng xử lý (KB/s) |
 | :--- | :---: | :---: | :---: | :---: | :---: |
@@ -318,4 +318,4 @@ Kết quả đo thực nghiệm trực tiếp khi chạy `python -X utf8 sha256.
 - Thời gian thực thi tăng tuyến tính hoàn toàn theo số khối $N$ ($\mathcal{O}(N)$): trung bình mỗi khối 512-bit mất khoảng $0.142\text{ ms}$ trên trình thông dịch Python thuần, đạt thông lượng ổn định ở mức $\sim 438\text{ KB/s}$ khi kích thước dữ liệu lớn dần.
 
 ### 8.3. Kết luận
-Đồ án đã xây dựng thành công thuật toán băm mật mã **SHA-256** bằng ngôn ngữ Python thuần túy từ những nguyên lý toán học cơ sở nhất (tự sinh hằng số từ căn bậc hai/bậc ba của các số nguyên tố, tự cài đặt toàn bộ các phép toán bit 32-bit có kiểm tra biên chặt chẽ, đệm bit Merkle-Damgård và vòng lặp nén Davies-Meyer 64 bước). Kết quả kiểm thử khớp tuyệt đối với chuẩn NIST FIPS 180-4 trên cả trường hợp chuỗi rỗng, đơn khối và đa khối biên, đồng thời cung cấp chính xác khóa 128-bit (`70c31dddb87cf9c3fd103a5669346839`) dẫn xuất từ họ tên sinh viên `"Trần Gia Thuận"` cho mô-đun mã hóa đối xứng [aes128.py](./aes128.py) và hàm băm nền tảng cho mô-đun chữ ký số [ecdsa.py](./ecdsa.py).
+Đồ án đã xây dựng thành công thuật toán băm mật mã **SHA-256** bằng ngôn ngữ Python thuần túy từ những nguyên lý toán học cơ sở nhất (tự sinh hằng số từ căn bậc hai/bậc ba của các số nguyên tố, tự cài đặt toàn bộ các phép toán bit 32-bit có kiểm tra biên chặt chẽ, đệm bit Merkle-Damgård và vòng lặp nén Davies-Meyer 64 bước). Kết quả kiểm thử khớp tuyệt đối với chuẩn NIST FIPS 180-4 trên cả trường hợp chuỗi rỗng, đơn khối và đa khối biên, đồng thời cung cấp chính xác khóa 128-bit (`70c31dddb87cf9c3fd103a5669346839`) dẫn xuất từ họ tên sinh viên `"Trần Gia Thuận"` cho mô-đun mã hóa đối xứng [aes128.py](../algorithms/aes128.py) và hàm băm nền tảng cho mô-đun chữ ký số [ecdsa.py](../algorithms/ecdsa.py).

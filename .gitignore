@@ -2,6 +2,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# AI agent & tool configs
+# Temporary Word / Office files
+~$*.docx
+
+# Editor & AI agent tool configs
+.vscode/
 .agents/
 .kilo/

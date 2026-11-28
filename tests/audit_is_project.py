@@ -12,9 +12,12 @@ import ast
 import os
 import sys
 
-PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
-if PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, PROJECT_ROOT)
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+ALGORITHMS_DIR = os.path.join(PROJECT_ROOT, "algorithms")
+DOCS_DIR = os.path.join(PROJECT_ROOT, "docs")
+for _path in (ALGORITHMS_DIR, PROJECT_ROOT):
+    if _path not in sys.path:
+        sys.path.insert(0, _path)
 
 import sha256
 import aes128
@@ -68,9 +71,9 @@ def main():
     # ==========================================================================
     print("\n[1] KIỂM TRA QUY ĐỊNH KHÔNG DÙNG THƯ VIỆN MẬT MÃ CÓ SẴN TRÊN CẢ 4 FILE (AST SCAN):")
     for ten_file in ["sha256.py", "aes128.py", "rsa.py", "ecdsa.py"]:
-        hop_le, ds_imp, vi_pham = kiem_tra_khong_dung_thu_vien_cam(os.path.join(PROJECT_ROOT, ten_file))
+        hop_le, ds_imp, vi_pham = kiem_tra_khong_dung_thu_vien_cam(os.path.join(ALGORITHMS_DIR, ten_file))
         ghi_nhan(
-            f"Quét AST import trong {ten_file}",
+            f"Quét AST import trong algorithms/{ten_file}",
             hop_le,
             f"Module sử dụng: {ds_imp} (Vi phạm: {vi_pham if vi_pham else '0 - Hợp lệ 100%'})",
         )
@@ -286,13 +289,13 @@ def main():
     # 6. KIỂM TRA CHÉO 4 BÁO CÁO & ĐẢM BẢO KHÔNG CÒN CHUỖI SAI 'Tran Gia Thuan 3'
     # ==========================================================================
     print("\n[6] ĐỐI CHIẾU CHÉO 4 FILE BÁO CÁO (.md) VÀ KIỂM TRA LOẠI BỎ CHUỖI SAI 'Tran Gia Thuan 3':")
-    with open(os.path.join(PROJECT_ROOT, "aes128.py"), "r", encoding="utf-8") as f:
+    with open(os.path.join(ALGORITHMS_DIR, "aes128.py"), "r", encoding="utf-8") as f:
         code_aes_str = f.read()
-    with open(os.path.join(PROJECT_ROOT, "bao_cao_aes128.md"), "r", encoding="utf-8") as f:
+    with open(os.path.join(DOCS_DIR, "bao_cao_aes128.md"), "r", encoding="utf-8") as f:
         bc_aes_str = f.read()
 
     ghi_nhan(
-        "Loại bỏ hoàn toàn chuỗi sai 'Tran Gia Thuan 3' khỏi aes128.py và bao_cao_aes128.md",
+        "Loại bỏ hoàn toàn chuỗi sai 'Tran Gia Thuan 3' khỏi algorithms/aes128.py và docs/bao_cao_aes128.md",
         ("Tran Gia Thuan 3" not in code_aes_str) and ("Tran Gia Thuan 3" not in bc_aes_str),
         "Không còn bất kỳ chuỗi 'Tran Gia Thuan 3' nào trong code và báo cáo",
     )
@@ -304,17 +307,17 @@ def main():
     s0_hex = " ".join(f"{b:02x}" for b in aes128.state_sang_bytes(s0))
     s1_hex = " ".join(f"{b:02x}" for b in aes128.state_sang_bytes(s1_out))
     ghi_nhan(
-        "Khớp ma trận Vòng 0, Vòng 1 và Bản mã của 'Tran Gia Thuan' (PKCS#7) trong bao_cao_aes128.md",
+        "Khớp ma trận Vòng 0, Vòng 1 và Bản mã của 'Tran Gia Thuan' (PKCS#7) trong docs/bao_cao_aes128.md",
         (s0_hex in bc_aes_str) and (s1_hex in bc_aes_str) and (ct_ten.hex() in bc_aes_str),
         f"Vòng 0: {s0_hex} | Vòng 1: {s1_hex} | CT: {ct_ten.hex()}",
     )
 
     for ten_bc in ["bao_cao_sha256.md", "bao_cao_aes128.md", "bao_cao_rsa.md", "bao_cao_ecdsa.md"]:
-        with open(os.path.join(PROJECT_ROOT, ten_bc), "r", encoding="utf-8") as f:
+        with open(os.path.join(DOCS_DIR, ten_bc), "r", encoding="utf-8") as f:
             nd = f.read()
         du_8_muc = all(f"## Mục {i}." in nd for i in range(1, 9))
         ghi_nhan(
-            f"Kiểm tra cấu trúc đủ 8 mục trong {ten_bc}",
+            f"Kiểm tra cấu trúc đủ 8 mục trong docs/{ten_bc}",
             du_8_muc,
             "Đầy đủ từ Mục 1 đến Mục 8",
         )
